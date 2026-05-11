@@ -2,7 +2,7 @@
 ## AI Reel Script & Thumbnail Generator
 **Version:** 1.0  
 **Stack:** Next.js 14 · TypeScript · Tailwind CSS · Supabase · Gemini API  
-**Assignment:** Zebvo AI — Option 3
+**Assignment:** Scriptly AI — Option 3
 
 ---
 
@@ -20,7 +20,7 @@ Creators waste hours on scripting and ideation. Good hooks are hard. Thumbnails 
 - Freelancers producing video content for clients
 
 ### 1.3 Brand Identity
-Zebvo AI positions itself as a premium, "studio-grade" tool for high-performing creators. The visual language uses a **Cyber-Obsidian & Electric Indigo** palette to signify the intersection of cutting-edge AI and creative expression.
+Scriptly AI positions itself as a premium, "studio-grade" tool for high-performing creators. The visual language uses a **Cyber-Obsidian & Electric Indigo** palette to signify the intersection of cutting-edge AI and creative expression.
 
 ---
 
@@ -47,6 +47,7 @@ User fills a generation form:
 | Platform | Dropdown | Instagram Reels, YouTube Shorts, TikTok |
 | Content Style | Dropdown | Educational, Entertaining, Motivational, Controversial |
 | Script Duration | Dropdown | 15s / 30s / 60s |
+| Extra Instructions | Textarea (optional) | Tone, audience, output format, CTA goal, constraints |
 
 AI generates (in sequence, separate prompts):
 1. **Video Title** — clickable, platform-optimized
@@ -55,6 +56,8 @@ AI generates (in sequence, separate prompts):
 4. **Scene Breakdown** — shot-by-shot visual direction
 5. **CTA** — end screen call to action
 6. **Hashtags** — 15-20 platform-relevant tags
+
+Prompting is optimized for professional, ad-grade output quality with strong retention and conversion-oriented structure.
 
 ### F4 — AI Thumbnail Generation
 - After script is generated, user can trigger thumbnail generation

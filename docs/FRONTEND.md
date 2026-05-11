@@ -22,7 +22,7 @@
 
 ## 2. Design System (Branding)
 
-The visual identity of Zebvo AI is designed to feel premium, futuristic, and creator-focused.
+The visual identity of Scriptly AI is designed to feel premium, futuristic, and creator-focused.
 
 | Token | Value | Description |
 |---|---|---|
@@ -141,20 +141,19 @@ src/
 
 ### 3.1 GenerationForm.tsx
 ```tsx
-// Controlled form — React Hook Form + Zod
-// Fields: topic, niche, platform, style, duration
-// On submit: calls useGenerate hook
-// Shows inline validation errors
-// Submit button disabled during generation
+// Controlled page-level form state in /app/(dashboard)/generate/page.tsx
+// Fields: topic, niche, platform, style, duration, additionalInstructions
+// Includes suggestion chips for extra instructions (tone, audience, CTA goal, etc.)
+// Submit triggers POST /api/generate/script and consumes NDJSON stream
+// Submit button disabled until required inputs are valid
 ```
 
 ### 3.2 GenerationResult.tsx
 ```tsx
-// Renders sections in order as they resolve
-// Each section fades in with Framer Motion
-// StreamingText component animates the text reveal
-// "Save Script" button appears after all sections load
-// "Generate Thumbnail" button triggers image gen
+// Result state renders title, hook, script, CTA, scenes, and hashtags
+// Data is assembled from streamed chunks: title_and_hook, full_script, scene_breakdown, hashtags
+// "Generate Thumbnail" button calls /api/generate/thumbnail
+// Thumbnail image renders from returned base64 data URL
 ```
 
 ### 3.3 ScriptEditor.tsx
@@ -221,10 +220,14 @@ interface GenerationStore {
 - EmptyState when no scripts exist
 
 ### `/generate`
-- Left panel: GenerationForm
-- Right panel: GenerationResult (hidden until generation starts)
+- Single-page generation workspace with step indicator
+- Inputs: topic, niche, platform, style, duration, extra instructions
+- "Extra instructions" supports user-specific tone/constraints/goals
+- Submits to `/api/generate/script` and streams NDJSON chunks into UI state
+- Result view includes title, hook, full script, CTA, scenes, hashtags
+- Inline thumbnail generation via `/api/generate/thumbnail`
 - Progress steps indicator at top
-- Mobile: stacked, form collapses after submit
+- Mobile: stacked flow with same end-to-end generation support
 
 ### `/script/[id]`
 - Full script view

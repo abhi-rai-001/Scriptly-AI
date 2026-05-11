@@ -127,7 +127,8 @@ path:   {user_id}/{script_id}.png
   "niche": "tech",
   "platform": "instagram",
   "style": "educational",
-  "duration": "60s"
+  "duration": "60s",
+  "additionalInstructions": "Use an authoritative tone and end with a strong CTA for comments."
 }
 ```
 
@@ -228,97 +229,33 @@ Server uploads thumbnail to Supabase Storage, stores URL in DB.
 
 ---
 
-## 3. Gemini Prompt Templates
+## 3. Gemini Prompt Strategy
 
-All prompts live in `src/lib/gemini/prompts.ts`. They are template strings, not hardcoded.
+All prompts live in `src/lib/gemini/prompts.ts`.
 
-### 3.1 Title + Hook Prompt
-```
-You are a viral short-form video strategist.
+### 3.1 Professional Ad-Grade Prompting
+- Prompts now use a **Creative Brief** block with:
+  - topic
+  - niche
+  - platform
+  - style
+  - duration
+  - `additionalInstructions`
+- Title/Hook prompt is tuned for high-retention opening.
+- Full script prompt uses a direct-response structure:
+  1. Hook
+  2. Problem/tension
+  3. Value delivery
+  4. Mini payoff
+  5. Conversion CTA
+- Scene prompt enforces shootable visuals and concise overlays.
+- Hashtag prompt enforces relevance + no duplicates.
+- Thumbnail prompt enforces premium, scroll-stopping ad creative direction.
 
-Generate a video title and hook for the following:
-- Topic: {{topic}}
-- Niche: {{niche}}
-- Platform: {{platform}} (optimized for algorithm)
-- Style: {{style}}
-- Duration: {{duration}}
-
-Return ONLY valid JSON:
-{
-  "title": "...",
-  "hook": "..."
-}
-
-Rules:
-- Hook must be the first 5 seconds of spoken content
-- Hook must create curiosity or urgency
-- Title must be click-worthy but not clickbait
-```
-
-### 3.2 Full Script Prompt
-```
-You are a professional short-form video scriptwriter.
-
-Write a {{duration}} script for:
-- Topic: {{topic}}
-- Hook already written: "{{hook}}"
-- Style: {{style}}
-- Platform: {{platform}}
-
-Return ONLY valid JSON:
-{
-  "script": "Full spoken script here, written for voiceover, no stage directions",
-  "cta": "End screen CTA — one sentence max"
-}
-
-Rules:
-- Write for spoken delivery, not reading
-- Match the platform's pacing (TikTok = faster, YouTube = slightly slower)
-- CTA should feel natural, not salesy
-```
-
-### 3.3 Scene Breakdown Prompt
-```
-Based on this script, generate a shot-by-shot scene breakdown for a {{platform}} reel:
-
-Script: {{script}}
-Duration: {{duration}}
-
-Return ONLY a JSON array:
-[
-  {
-    "scene": 1,
-    "duration": "0-5s",
-    "visual": "What the camera shows",
-    "audio": "What is being said",
-    "text_overlay": "On-screen text if any"
-  }
-]
-```
-
-### 3.4 Hashtags Prompt
-```
-Generate 15-20 hashtags for a {{platform}} video about "{{topic}}" in the {{niche}} niche.
-
-Mix of:
-- 3-4 very broad hashtags (1M+ posts)
-- 6-8 medium hashtags (100K-1M posts)
-- 5-6 niche-specific hashtags (<100K posts)
-
-Return ONLY a JSON array of strings: ["#Tag1", "#Tag2", ...]
-```
-
-### 3.5 Thumbnail Prompt
-```
-Create a bold, eye-catching YouTube Shorts / Instagram Reel thumbnail image.
-
-Video title: {{title}}
-Hook: {{hook}}
-Niche: {{niche}}
-
-Style: High contrast, bold text overlay, emotional face or dramatic visual,
-professional graphic design quality. No watermarks.
-```
+### 3.2 Output Safety and Parsing
+- All text-generation steps request `application/json`.
+- API extracts and parses JSON defensively (handles fenced/non-fenced model output).
+- Responses are validated with Zod parsers before streaming to the client.
 
 ---
 
@@ -330,10 +267,10 @@ professional graphic design quality. No watermarks.
 User (Browser)
 │
 ├─ Fills GenerationForm
-│   └─ topic, niche, platform, style, duration
+│   └─ topic, niche, platform, style, duration, additionalInstructions
 │
 ├─ Clicks "Generate Script"
-│   └─ generationStore.status = 'generating'
+│   └─ UI enters generating state
 │
 ├─ POST /api/generate/script
 │   │
@@ -342,23 +279,25 @@ User (Browser)
 │       ├─ Checks Supabase session (auth guard)
 │       │
 │       ├─ Step 1: Gemini call → title + hook
-│       │   └─ parse JSON response
+│       │   └─ parse + validate JSON
 │       ├─ Step 2: Gemini call → script + CTA
 │       │   └─ uses hook from Step 1 in prompt
 │       ├─ Step 3: Gemini call → scene breakdown
 │       │   └─ uses script from Step 2 in prompt
 │       ├─ Step 4: Gemini call → hashtags
 │       │
-│       └─ Returns combined JSON response
+│       └─ Streams NDJSON chunks:
+│           title_and_hook → full_script → scene_breakdown → hashtags
 │
-├─ GenerationResult renders each section as data arrives
-│   └─ StreamingText animation on each field
+├─ Generate page consumes stream and assembles final result state
 │
-└─ User clicks "Save Script"
+└─ User can trigger "Generate Thumbnail" from result panel
+│
+└─ (optional) User clicks "Save Script"
     └─ POST /api/scripts
         ├─ Upload thumbnail to Supabase Storage (if generated)
         ├─ INSERT into scripts table
-        └─ React Query cache invalidated → dashboard refreshes
+        └─ Dashboard reload/fetch flow refreshes data
 ```
 
 ---
@@ -370,11 +309,11 @@ User clicks "Generate Thumbnail"
 │
 ├─ POST /api/generate/thumbnail
 │   ├─ Builds image prompt from title + hook + niche
-│   ├─ Calls Gemini image generation API
-│   ├─ Returns base64 image string
+│   ├─ Calls Gemini model
+│   ├─ Extracts inline image payload from candidate content
+│   └─ Returns data URL base64 image string
 │
-├─ ThumbnailPanel displays image
-│   ├─ User can download immediately (even before saving)
+├─ Generate page displays image inline
 │
 └─ On "Save Script":
     ├─ base64 thumbnail sent with save request
@@ -407,8 +346,8 @@ User visits /dashboard
 | Scenario | Handling |
 |---|---|
 | Gemini API fails | Catch error, return 500 with message, show toast + retry button |
-| Gemini returns invalid JSON | Retry once with stricter prompt, fallback to raw text |
-| Image generation fails | Show placeholder, allow script save without thumbnail |
-| DB write fails | Show error toast, keep result in Zustand so user doesn't lose generated content |
+| Gemini returns invalid JSON | Return generation error chunk; client surfaces error state |
+| Image generation returns no image payload | Return 502 with model details; UI shows thumbnail error |
+| DB write fails | Show error toast and keep generated result in page state so user doesn't lose content |
 | Auth session expired | Supabase SDK auto-refreshes; if it fails, redirect to /login |
 | Network timeout | Abort controller on fetch, show "Request timed out — try again" |
