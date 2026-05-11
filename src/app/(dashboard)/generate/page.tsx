@@ -1,11 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useCallback } from "react";
 import Image from "next/image";
 import {
   AlertCircle,
   Check,
-  ChevronRight,
   Clock,
   Copy,
   Download,
@@ -13,16 +12,21 @@ import {
   Loader2,
   RefreshCw,
   Sparkles,
-  Zap,
 } from "lucide-react";
+import { motion } from "framer-motion";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-
-type Platform = "instagram" | "youtube_shorts" | "tiktok";
-type Duration = "15s" | "30s" | "60s";
-type Style = "educational" | "entertaining" | "motivational" | "controversial";
+import { useGenerationStore } from "@/store/generationStore";
+import type { 
+  Platform, 
+  Duration, 
+  Style, 
+  SceneBreakdownItem, 
+  GeneratedScript 
+} from "@/store/generationStore";
+import { StreamingText } from "@/components/animations/StreamingText";
 
 type GenerationChunkType =
   | "title_and_hook"
@@ -30,32 +34,6 @@ type GenerationChunkType =
   | "scene_breakdown"
   | "hashtags"
   | "error";
-
-interface FormData {
-  topic: string;
-  niche: string;
-  platform: Platform;
-  duration: Duration;
-  style: Style;
-  additionalInstructions: string;
-}
-
-interface SceneBreakdownItem {
-  scene: number;
-  duration: string;
-  visual: string;
-  audio: string;
-  text_overlay?: string;
-}
-
-interface GeneratedScript {
-  title: string;
-  hook: string;
-  script: string;
-  cta: string;
-  hashtags: string[];
-  sceneBreakdown: SceneBreakdownItem[];
-}
 
 interface ThumbnailResponse {
   imageBase64: string;
@@ -143,27 +121,94 @@ function getErrorMessage(error: unknown): string {
   return "Something went wrong";
 }
 
+function slugify(value: string) {
+  return value
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 60) || "script";
+}
+
+function downloadBlob(content: BlobPart, filename: string, type: string) {
+  const blob = new Blob([content], { type });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
+function buildMarkdownExport(result: GeneratedScript, platformLabel: string, duration: string, niche: string) {
+  return [
+    `# ${result.title}`,
+    "",
+    `**Platform:** ${platformLabel}`,
+    `**Duration:** ${duration}`,
+    `**Niche:** ${niche}`,
+    "",
+    "## Hook",
+    result.hook,
+    "",
+    "## Full Script",
+    result.script,
+    "",
+    "## CTA",
+    result.cta,
+    "",
+    "## Scene Directions",
+    ...result.sceneBreakdown.map((scene) => {
+      const overlay = scene.text_overlay ? ` | Text: ${scene.text_overlay}` : "";
+      return `- Scene ${scene.scene} (${scene.duration}) — Visual: ${scene.visual} | Audio: ${scene.audio}${overlay}`;
+    }),
+    "",
+    "## Hashtags",
+    result.hashtags.join(" "),
+    "",
+  ].join("\n");
+}
+
 function StepIndicator({ current }: { current: number }) {
   return (
-    <div className="flex items-center gap-2 mb-10">
+    <div className="flex items-center gap-1 mb-10">
       {STEPS.map((label, i) => (
-        <div key={label} className="flex items-center gap-2">
-          <div
-            className={cn(
-              "flex items-center justify-center w-7 h-7 rounded-full text-xs font-bold transition-all duration-500",
-              i < current
-                ? "bg-primary text-white"
-                : i === current
-                  ? "bg-primary/20 border border-primary text-primary"
-                  : "bg-secondary/50 text-muted-foreground border border-white/10"
-            )}
-          >
-            {i < current ? <Check className="w-3.5 h-3.5" /> : i + 1}
+        <div key={label} className="flex items-center gap-1">
+          <div className="flex items-center gap-2">
+            <div
+              className={cn(
+                "flex items-center justify-center w-7 h-7 rounded-full text-xs font-bold transition-all duration-500",
+                i < current
+                  ? "bg-[oklch(0.62_0.24_285)] text-white"
+                  : i === current
+                    ? "bg-[oklch(0.62_0.24_285_/_15%)] border border-[oklch(0.62_0.24_285_/_50%)] text-[oklch(0.72_0.20_285)]"
+                    : "bg-white/4 text-muted-foreground border border-white/8"
+              )}
+            >
+              {i < current ? <Check className="w-3.5 h-3.5" /> : i + 1}
+            </div>
+            <span
+              className={cn(
+                "text-sm font-semibold transition-colors duration-300",
+                i <= current ? "text-foreground" : "text-muted-foreground"
+              )}
+              style={{ fontFamily: "var(--font-cabinet)" }}
+            >
+              {label}
+            </span>
           </div>
-          <span className={cn("text-sm font-medium", i <= current ? "text-foreground" : "text-muted-foreground")}>
-            {label}
-          </span>
-          {i < STEPS.length - 1 && <ChevronRight className="w-4 h-4 text-muted-foreground/40 mx-1" />}
+          {i < STEPS.length - 1 && (
+            <div className="flex items-center mx-3">
+              <div
+                className={cn(
+                  "h-px w-12 transition-all duration-500",
+                  i < current
+                    ? "bg-[oklch(0.62_0.24_285)]" 
+                    : "bg-white/10"
+                )}
+              />
+            </div>
+          )}
         </div>
       ))}
     </div>
@@ -174,10 +219,14 @@ function ScriptSection({
   title,
   content,
   onRegenerate,
+  animate = false,
+  onComplete,
 }: {
   title: string;
   content: string | string[];
   onRegenerate: () => void;
+  animate?: boolean;
+  onComplete?: () => void;
 }) {
   const [copied, setCopied] = useState(false);
   const text = Array.isArray(content) ? content.join("\n\n") : content;
@@ -189,37 +238,63 @@ function ScriptSection({
   };
 
   return (
-    <div className="glass-card rounded-2xl p-5 group border border-white/8 hover:border-white/15 transition-all duration-300">
-      <div className="flex items-center justify-between mb-3">
-        <h3 className="text-xs font-bold uppercase tracking-[0.15em] text-primary">{title}</h3>
-        <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+      className="lux-card rounded-2xl p-6 group"
+    >
+      <div className="flex items-center justify-between mb-5">
+        <h3
+          className="text-xs font-black uppercase tracking-[0.15em] text-[oklch(0.62_0.24_285)]"
+          style={{ fontFamily: "var(--font-cabinet)" }}
+        >
+          {title}
+        </h3>
+        <div className="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
           <button
             onClick={handleCopy}
-            className="w-7 h-7 rounded-lg bg-secondary/50 hover:bg-secondary flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+            className="w-8 h-8 rounded-xl bg-white/5 hover:bg-white/10 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+            title="Copy section"
           >
-            {copied ? <Check className="w-3 h-3 text-green-400" /> : <Copy className="w-3 h-3" />}
+            {copied ? <Check className="w-3.5 h-3.5 text-[oklch(0.72_0.16_160)]" /> : <Copy className="w-3.5 h-3.5" />}
           </button>
           <button
             onClick={onRegenerate}
-            className="w-7 h-7 rounded-lg bg-secondary/50 hover:bg-secondary flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+            className="w-8 h-8 rounded-xl bg-white/5 hover:bg-white/10 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+            title="Regenerate"
           >
-            <RefreshCw className="w-3 h-3" />
+            <RefreshCw className="w-3.5 h-3.5" />
           </button>
         </div>
       </div>
       {Array.isArray(content) ? (
-        <ul className="space-y-2">
+        <ul className="space-y-3">
           {content.map((item, i) => (
-            <li key={i} className="text-sm text-foreground/80 leading-relaxed flex items-start gap-2">
-              <span className="text-primary/60 mt-0.5 flex-shrink-0">—</span>
-              {item}
+            <li key={i} className="text-sm text-foreground/85 leading-relaxed flex items-start gap-2.5">
+              <span className="text-[oklch(0.62_0.24_285_/_50%)] mt-0.5 flex-shrink-0 font-bold">{String(i + 1).padStart(2, "0")}.</span>
+              {animate ? (
+                <StreamingText
+                  text={item}
+                  speed={5}
+                  onComplete={i === content.length - 1 ? onComplete : undefined}
+                />
+              ) : (
+                item
+              )}
             </li>
           ))}
         </ul>
       ) : (
-        <p className="text-sm text-foreground/80 leading-relaxed whitespace-pre-line">{content}</p>
+        <div className="text-sm text-foreground/85 leading-relaxed whitespace-pre-line">
+          {animate ? (
+            <StreamingText text={content} speed={5} onComplete={onComplete} />
+          ) : (
+            content
+          )}
+        </div>
       )}
-    </div>
+    </motion.div>
   );
 }
 
@@ -233,50 +308,47 @@ function stringifyScenes(scenes: SceneBreakdownItem[]): string[] {
 }
 
 export default function GeneratePage() {
-  const [step, setStep] = useState(0);
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [isGeneratingThumbnail, setIsGeneratingThumbnail] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [thumbnailError, setThumbnailError] = useState<string | null>(null);
-  const [thumbnailImage, setThumbnailImage] = useState<string | null>(null);
-  const [result, setResult] = useState<GeneratedScript | null>(null);
+  const {
+    step,
+    setStep,
+    isGenerating,
+    setIsGenerating,
+    error,
+    setError,
+    form,
+    setForm,
+    result,
+    setResult,
+    thumbnailImage,
+    setThumbnailImage,
+    resetAll,
+  } = useGenerationStore();
 
-  const [form, setForm] = useState<FormData>({
-    topic: "",
-    niche: "",
-    platform: "instagram",
-    duration: "60s",
-    style: "educational",
-    additionalInstructions: "",
-  });
+  const [isGeneratingThumbnail, setIsGeneratingThumbnail] = useState(false);
+  const [thumbnailError, setThumbnailError] = useState<string | null>(null);
+  const [revealedCount, setRevealedCount] = useState(0);
 
   const canGenerate = useMemo(() => form.topic.trim().length > 1 && form.niche.trim().length > 1, [form.topic, form.niche]);
 
-  const appendInstruction = (suggestion: string) => {
-    setForm((prev) => ({
-      ...prev,
-      additionalInstructions: prev.additionalInstructions
-        ? `${prev.additionalInstructions}\n${suggestion}`
-        : suggestion,
-    }));
-  };
+  const sections = result ? [
+    { id: "title", title: "🏷️ Title", content: result.title },
+    { id: "hook", title: "🪝 Hook (First 3-5 seconds)", content: result.hook },
+    { id: "script", title: "📝 Full Script", content: result.script },
+    { id: "cta", title: "💥 CTA (Call To Action)", content: result.cta },
+    { id: "scenes", title: "🎬 Scene Directions", content: stringifyScenes(result.sceneBreakdown) },
+    { id: "hashtags", title: "# Hashtags", content: result.hashtags },
+  ] : [];
 
-  const resetAll = () => {
-    setStep(0);
-    setResult(null);
-    setError(null);
-    setThumbnailError(null);
-    setThumbnailImage(null);
-    setIsGenerating(false);
-    setIsGeneratingThumbnail(false);
+  const appendInstruction = (suggestion: string) => {
     setForm({
-      topic: "",
-      niche: "",
-      platform: "instagram",
-      duration: "60s",
-      style: "educational",
-      additionalInstructions: "",
+      additionalInstructions: form.additionalInstructions
+        ? `${form.additionalInstructions}\n${suggestion}`
+        : suggestion,
     });
+  };
+  const resetAllAndSequence = () => {
+    resetAll();
+    setRevealedCount(0);
   };
 
   const handleGenerate = async () => {
@@ -288,6 +360,7 @@ export default function GeneratePage() {
     setThumbnailError(null);
     setThumbnailImage(null);
     setResult(null);
+    setRevealedCount(0);
 
     const draft: Partial<GeneratedScript> = {
       hashtags: [],
@@ -304,7 +377,7 @@ export default function GeneratePage() {
           platform: form.platform,
           style: form.style,
           duration: form.duration,
-          additionalInstructions: form.additionalInstructions.trim() || undefined,
+          additionalInstructions: (form.additionalInstructions || "").trim() || undefined,
         }),
       });
 
@@ -319,7 +392,7 @@ export default function GeneratePage() {
 
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
-      let buffer = "";
+      let streamBuffer = "";
 
       const applyChunk = (chunk: StreamChunk) => {
         switch (chunk.type) {
@@ -358,9 +431,9 @@ export default function GeneratePage() {
         const { value, done } = await reader.read();
         if (done) break;
 
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split("\n");
-        buffer = lines.pop() || "";
+        streamBuffer += decoder.decode(value, { stream: true });
+        const lines = streamBuffer.split("\n");
+        streamBuffer = lines.pop() || "";
 
         for (const line of lines) {
           if (!line.trim()) continue;
@@ -369,8 +442,8 @@ export default function GeneratePage() {
         }
       }
 
-      if (buffer.trim()) {
-        const parsed = JSON.parse(buffer.trim()) as StreamChunk;
+      if (streamBuffer.trim()) {
+        const parsed = JSON.parse(streamBuffer.trim()) as StreamChunk;
         applyChunk(parsed);
       }
 
@@ -433,6 +506,28 @@ export default function GeneratePage() {
     }
   };
 
+  const handleExportScript = useCallback(() => {
+    if (!result) return;
+
+    const markdown = buildMarkdownExport(
+      result,
+      PLATFORM_LABELS[form.platform],
+      form.duration,
+      form.niche
+    );
+    downloadBlob(markdown, `${slugify(result.title)}.md`, "text/markdown;charset=utf-8");
+  }, [form.duration, form.niche, form.platform, result]);
+
+  const handleDownloadThumbnail = useCallback(async () => {
+    if (!thumbnailImage) return;
+
+    const response = await fetch(thumbnailImage);
+    const blob = await response.blob();
+    const extension = blob.type === "image/png" ? "png" : blob.type === "image/jpeg" ? "jpg" : "webp";
+    downloadBlob(blob, `${slugify(result?.title || "thumbnail")}.${extension}`, blob.type || "image/webp");
+  }, [result?.title, thumbnailImage]);
+
+
   return (
     <div className="max-w-4xl mx-auto">
       <StepIndicator current={step} />
@@ -448,15 +543,18 @@ export default function GeneratePage() {
       {step === 0 && (
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight mb-1" style={{ fontFamily: "var(--font-syne)" }}>
+            <h1
+              className="text-3xl font-black tracking-[-0.03em] mb-1"
+              style={{ fontFamily: "var(--font-cabinet)" }}
+            >
               Generate a Script
             </h1>
             <p className="text-sm text-muted-foreground">
-              Submit your reel details and get a professional ad-grade script with hook, scenes, CTA, and hashtags.
+              Fill in your details and get a viral-ready script with hook, scenes, CTA, and hashtags — in under a minute.
             </p>
           </div>
 
-          <div className="grid gap-6 glass-card rounded-2xl p-6 border border-white/8">
+          <div className="grid gap-6 lux-card rounded-2xl p-6">
             <div className="grid gap-2">
               <label className="text-sm font-semibold">
                 Video Topic <span className="text-destructive">*</span>
@@ -464,8 +562,8 @@ export default function GeneratePage() {
               <Input
                 placeholder="e.g. Why most beginner traders lose money"
                 value={form.topic}
-                onChange={(e) => setForm({ ...form, topic: e.target.value })}
-                className="h-11 bg-secondary/30 border-white/10 focus-visible:ring-primary/50"
+                onChange={(e) => setForm({ topic: e.target.value })}
+                className="h-11 bg-secondary/40 border-white/8 focus-visible:ring-[oklch(0.62_0.24_285_/_40%)] rounded-xl"
               />
               <p className="text-xs text-muted-foreground">Be specific. Great inputs create better scripts.</p>
             </div>
@@ -477,8 +575,8 @@ export default function GeneratePage() {
               <Input
                 placeholder="e.g. Personal finance, fitness, skincare, SaaS"
                 value={form.niche}
-                onChange={(e) => setForm({ ...form, niche: e.target.value })}
-                className="h-11 bg-secondary/30 border-white/10 focus-visible:ring-primary/50"
+                onChange={(e) => setForm({ niche: e.target.value })}
+                className="h-11 bg-secondary/40 border-white/8 focus-visible:ring-[oklch(0.62_0.24_285_/_40%)] rounded-xl"
               />
             </div>
 
@@ -490,12 +588,12 @@ export default function GeneratePage() {
                   return (
                     <button
                       key={platformOption.value}
-                      onClick={() => setForm({ ...form, platform: platformOption.value })}
+                      onClick={() => setForm({ platform: platformOption.value })}
                       className={cn(
                         "flex flex-col items-center gap-2 p-4 rounded-xl border transition-all duration-200 text-sm font-medium",
                         form.platform === platformOption.value
-                          ? "border-primary/50 bg-primary/10 text-foreground"
-                          : "border-white/10 bg-secondary/20 text-muted-foreground hover:border-white/20 hover:bg-secondary/40"
+                          ? "border-[oklch(0.62_0.24_285_/_50%)] bg-[oklch(0.62_0.24_285_/_10%)] text-foreground"
+                          : "border-white/8 bg-white/3 text-muted-foreground hover:border-white/15 hover:bg-white/5"
                       )}
                     >
                       <span className={platformOption.color}>
@@ -514,12 +612,12 @@ export default function GeneratePage() {
                 {DURATIONS.map((durationOption) => (
                   <button
                     key={durationOption}
-                    onClick={() => setForm({ ...form, duration: durationOption })}
+                    onClick={() => setForm({ duration: durationOption })}
                     className={cn(
-                      "flex items-center gap-2 px-5 py-2.5 rounded-xl border text-sm font-medium transition-all duration-200",
+                      "flex items-center gap-2 px-5 py-2.5 rounded-xl border text-sm font-semibold transition-all duration-200",
                       form.duration === durationOption
-                        ? "border-primary/50 bg-primary/10 text-foreground"
-                        : "border-white/10 bg-secondary/20 text-muted-foreground hover:border-white/20"
+                        ? "border-[oklch(0.62_0.24_285_/_50%)] bg-[oklch(0.62_0.24_285_/_10%)] text-foreground"
+                        : "border-white/8 bg-white/3 text-muted-foreground hover:border-white/15"
                     )}
                   >
                     <Clock className="w-3.5 h-3.5" />
@@ -535,15 +633,15 @@ export default function GeneratePage() {
                 {STYLES.map((styleOption) => (
                   <button
                     key={styleOption.value}
-                    onClick={() => setForm({ ...form, style: styleOption.value })}
+                    onClick={() => setForm({ style: styleOption.value })}
                     className={cn(
                       "flex flex-col items-start gap-1 p-3.5 rounded-xl border text-left transition-all duration-200",
                       form.style === styleOption.value
-                        ? "border-primary/50 bg-primary/10"
-                        : "border-white/10 bg-secondary/20 hover:border-white/20"
+                        ? "border-[oklch(0.62_0.24_285_/_50%)] bg-[oklch(0.62_0.24_285_/_10%)]"
+                        : "border-white/8 bg-white/3 hover:border-white/15"
                     )}
                   >
-                    <span className="text-sm font-semibold text-foreground">{styleOption.label}</span>
+                    <span className="text-sm font-semibold text-foreground" style={{ fontFamily: "var(--font-cabinet)" }}>{styleOption.label}</span>
                     <span className="text-xs text-muted-foreground">{styleOption.desc}</span>
                   </button>
                 ))}
@@ -554,7 +652,7 @@ export default function GeneratePage() {
               <label className="text-sm font-semibold">Extra Instructions (Optional)</label>
               <textarea
                 value={form.additionalInstructions}
-                onChange={(e) => setForm({ ...form, additionalInstructions: e.target.value })}
+                onChange={(e) => setForm({ additionalInstructions: e.target.value })}
                 placeholder="Add tone, target audience, expected output format, offer details, words to avoid, CTA goal..."
                 className="min-h-30 rounded-xl border border-white/10 bg-secondary/30 px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
                 maxLength={500}
@@ -571,14 +669,14 @@ export default function GeneratePage() {
                   </button>
                 ))}
               </div>
-              <p className="text-xs text-muted-foreground">{form.additionalInstructions.length}/500 characters</p>
+              <div className="text-xs text-muted-foreground">{form.additionalInstructions?.length || 0}/500 characters</div>
             </div>
           </div>
 
           <Button
             onClick={handleGenerate}
             disabled={!canGenerate || isGenerating}
-            className="w-full h-14 bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-base glow-primary disabled:opacity-50 disabled:glow-none"
+            className="w-full h-14 btn-amber border-0 font-bold text-base disabled:opacity-40 disabled:pointer-events-none rounded-xl"
           >
             {isGenerating ? <Loader2 className="w-5 h-5 mr-2 animate-spin" /> : <Sparkles className="w-5 h-5 mr-2" />}
             Generate Script with AI
@@ -590,20 +688,26 @@ export default function GeneratePage() {
       {step === 1 && (
         <div className="flex flex-col items-center justify-center py-32 animate-in fade-in duration-500">
           <div className="relative mb-8">
-            <div className="w-24 h-24 rounded-2xl bg-primary/10 border border-primary/30 flex items-center justify-center">
-              <Sparkles className="w-10 h-10 text-primary animate-pulse" />
+            <div className="w-24 h-24 rounded-2xl flex items-center justify-center relative overflow-hidden"
+              style={{ background: "oklch(0.62 0.24 285 / 10%)", border: "1px solid oklch(0.62 0.24 285 / 25%)" }}
+            >
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,oklch(0.62_0.24_285_/_20%),transparent_70%)]" />
+              <Sparkles className="w-10 h-10 text-[oklch(0.72_0.20_285)] animate-pulse relative z-10" />
             </div>
-            <div className="absolute -inset-4 rounded-3xl border border-primary/10 animate-ping" />
+            <div className="absolute -inset-4 rounded-3xl border border-[oklch(0.62_0.24_285_/_12%)] animate-ping" />
           </div>
-          <h2 className="text-2xl font-bold mb-2" style={{ fontFamily: "var(--font-syne)" }}>
-            Generating your script...
+          <h2
+            className="text-2xl font-black mb-2 tracking-[-0.02em]"
+            style={{ fontFamily: "var(--font-cabinet)" }}
+          >
+            Crafting your script...
           </h2>
-          <p className="text-sm text-muted-foreground mb-8 text-center max-w-xs">
-            Crafting a professional, conversion-focused script for {PLATFORM_LABELS[form.platform]}.
+          <p className="text-sm text-muted-foreground mb-8 text-center max-w-xs leading-relaxed">
+            Building a conversion-focused script for {PLATFORM_LABELS[form.platform]}. This takes about 10 seconds.
           </p>
           <div className="flex items-center gap-3 text-sm text-muted-foreground">
-            <Loader2 className="w-4 h-4 animate-spin text-primary" />
-            Building title, hook, script, scenes, and hashtags...
+            <Loader2 className="w-4 h-4 animate-spin text-[oklch(0.62_0.24_285)]" />
+            Generating title, hook, script, scenes &amp; hashtags...
           </div>
         </div>
       )}
@@ -613,8 +717,8 @@ export default function GeneratePage() {
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
-              <div className="flex items-center gap-2 mb-1">
-                <Badge className="bg-green-500/10 text-green-400 border-green-500/20 border text-xs">Script Ready</Badge>
+              <div className="flex items-center gap-2 mb-2">
+                <Badge className="bg-[oklch(0.72_0.16_160_/_10%)] text-[oklch(0.72_0.16_160)] border border-[oklch(0.72_0.16_160_/_25%)] text-xs">✓ Script Ready</Badge>
                 <Badge variant="outline" className="text-xs border-white/10 text-muted-foreground capitalize">
                   {PLATFORM_LABELS[form.platform]}
                 </Badge>
@@ -622,29 +726,40 @@ export default function GeneratePage() {
                   {form.duration}
                 </Badge>
               </div>
-              <h2 className="text-xl font-bold" style={{ fontFamily: "var(--font-syne)" }}>
+              <h2
+                className="text-xl font-black tracking-[-0.02em]"
+                style={{ fontFamily: "var(--font-cabinet)" }}
+              >
                 Your Script is Ready
               </h2>
             </div>
             <div className="flex items-center gap-3">
-              <Button variant="outline" size="sm" className="border-white/10 h-9" disabled>
+              <Button variant="outline" size="sm" className="border-white/10 h-9 rounded-xl" onClick={handleExportScript}>
                 <Download className="w-3.5 h-3.5 mr-2" />
                 Export
               </Button>
-              <Button size="sm" className="bg-primary hover:bg-primary/90 h-9" disabled>
-                <Zap className="w-3.5 h-3.5 mr-2" />
+              <Button size="sm" className="btn-amber border-0 h-9 rounded-xl" disabled>
+                <Sparkles className="w-3.5 h-3.5 mr-2" />
                 Save Script
               </Button>
             </div>
           </div>
 
           <div className="grid gap-4">
-            <ScriptSection title="🏷️ Title" content={result.title} onRegenerate={() => {}} />
-            <ScriptSection title="🪝 Hook (First 3-5 seconds)" content={result.hook} onRegenerate={() => {}} />
-            <ScriptSection title="📝 Full Script" content={result.script} onRegenerate={() => {}} />
-            <ScriptSection title="💥 CTA (Call To Action)" content={result.cta} onRegenerate={() => {}} />
-            <ScriptSection title="🎬 Scene Directions" content={stringifyScenes(result.sceneBreakdown)} onRegenerate={() => {}} />
-            <ScriptSection title="# Hashtags" content={result.hashtags} onRegenerate={() => {}} />
+            {sections.slice(0, revealedCount + 1).map((section, i) => (
+              <ScriptSection
+                key={section.id}
+                title={section.title}
+                content={section.content}
+                animate={i === revealedCount}
+                onRegenerate={() => {}}
+                onComplete={() => {
+                  if (i === revealedCount && revealedCount < sections.length - 1) {
+                    setRevealedCount(revealedCount + 1);
+                  }
+                }}
+              />
+            ))}
           </div>
 
           <div className="glass-card rounded-2xl p-6 border border-white/8">
@@ -667,18 +782,29 @@ export default function GeneratePage() {
                 <p className="text-sm text-muted-foreground">
                   Generate a high-converting thumbnail aligned with this script and platform.
                 </p>
-                <Button
-                  onClick={handleGenerateThumbnail}
-                  disabled={isGeneratingThumbnail}
-                  className="bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 h-10"
-                >
-                  {isGeneratingThumbnail ? (
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  ) : (
-                    <Sparkles className="w-4 h-4 mr-2" />
-                  )}
-                  {thumbnailImage ? "Regenerate Thumbnail" : "Generate Thumbnail"}
-                </Button>
+                <div className="flex flex-wrap items-center gap-3">
+                  <Button
+                    onClick={handleGenerateThumbnail}
+                    disabled={isGeneratingThumbnail}
+                    className="bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 h-10"
+                  >
+                    {isGeneratingThumbnail ? (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    ) : (
+                      <Sparkles className="w-4 h-4 mr-2" />
+                    )}
+                    {thumbnailImage ? "Regenerate Thumbnail" : "Generate Thumbnail"}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={handleDownloadThumbnail}
+                    disabled={!thumbnailImage}
+                    className="border-white/10 bg-white/5 h-10"
+                  >
+                    <Download className="w-4 h-4 mr-2" />
+                    Download PNG
+                  </Button>
+                </div>
                 {thumbnailError && (
                   <p className="text-xs text-destructive flex items-center gap-2">
                     <AlertCircle className="w-3.5 h-3.5" />
@@ -689,7 +815,7 @@ export default function GeneratePage() {
             </div>
           </div>
 
-          <Button variant="ghost" onClick={resetAll} className="text-muted-foreground hover:text-foreground">
+          <Button variant="ghost" onClick={resetAllAndSequence} className="text-muted-foreground hover:text-foreground">
             ← Generate a new script
           </Button>
         </div>

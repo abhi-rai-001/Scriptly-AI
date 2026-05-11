@@ -21,6 +21,7 @@ export async function fetchProjectsWithStats() {
   }
 
   // Format the output for the frontend
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return data.map((project: any) => ({
     ...project,
     scriptCount: project.scripts[0]?.count || 0,

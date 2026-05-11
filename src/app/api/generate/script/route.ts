@@ -19,19 +19,11 @@ import {
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 function extractJsonPayload(raw: string): string {
-  const withoutFences = raw
-    .trim()
-    .replace(/^```json\s*/i, "")
-    .replace(/^```\s*/i, "")
-    .replace(/\s*```$/i, "")
-    .trim();
-
-  if (withoutFences.startsWith("{") || withoutFences.startsWith("[")) {
-    return withoutFences;
-  }
-
-  const firstObject = withoutFences.indexOf("{");
-  const firstArray = withoutFences.indexOf("[");
+  const trimmed = raw.trim();
+  
+  const firstObject = trimmed.indexOf("{");
+  const firstArray = trimmed.indexOf("[");
+  
   const objectStart = firstObject === -1 ? Number.POSITIVE_INFINITY : firstObject;
   const arrayStart = firstArray === -1 ? Number.POSITIVE_INFINITY : firstArray;
   const start = Math.min(objectStart, arrayStart);
@@ -40,7 +32,7 @@ function extractJsonPayload(raw: string): string {
     throw new Error("Model returned non-JSON content.");
   }
 
-  const source = withoutFences.slice(start);
+  const source = trimmed.slice(start);
   if (source.startsWith("{")) {
     const end = source.lastIndexOf("}");
     if (end === -1) throw new Error("Model returned malformed JSON object.");
@@ -88,7 +80,7 @@ export async function POST(req: NextRequest) {
     const stream = new ReadableStream({
       async start(controller) {
         const sendChunk = (type: string, payload: unknown) => {
-          controller.enqueue(new TextEncoder().encode(JSON.stringify({ type, payload }) + "\\n"));
+          controller.enqueue(new TextEncoder().encode(JSON.stringify({ type, payload }) + "\n"));
         };
 
         try {

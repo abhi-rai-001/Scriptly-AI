@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Zap, Menu, X } from "lucide-react";
+import {  Menu, X } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -34,9 +34,6 @@ export function Navbar() {
       <nav className="max-w-7xl mx-auto px-6 flex items-center justify-between">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2.5 group">
-          <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center glow-primary transition-transform group-hover:scale-110">
-            <Zap className="w-4 h-4 text-white fill-white" />
-          </div>
           <span
             className="text-lg font-bold tracking-tight"
             style={{ fontFamily: "var(--font-syne)" }}

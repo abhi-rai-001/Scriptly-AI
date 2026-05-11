@@ -1,18 +1,20 @@
 import type { Metadata } from "next";
-import { Space_Grotesk, Syne, Geist_Mono } from "next/font/google";
+import { Plus_Jakarta_Sans, Outfit, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
-const spaceGrotesk = Space_Grotesk({
-  variable: "--font-space-grotesk",
+// Body font — Satoshi-equivalent: clean, geometric, premium
+const satoshi = Plus_Jakarta_Sans({
+  variable: "--font-satoshi",
   subsets: ["latin"],
-  weight: ["300", "400", "500", "600", "700"],
+  weight: ["300", "400", "500", "600", "700", "800"],
   display: "swap",
 });
 
-const syne = Syne({
-  variable: "--font-syne",
+// Display / heading font — Cabinet Grotesk-equivalent: distinctive, modern
+const cabinet = Outfit({
+  variable: "--font-cabinet",
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800"],
+  weight: ["400", "500", "600", "700", "800", "900"],
   display: "swap",
 });
 
@@ -69,7 +71,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${spaceGrotesk.variable} ${syne.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${satoshi.variable} ${cabinet.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-background text-foreground">
         {children}
