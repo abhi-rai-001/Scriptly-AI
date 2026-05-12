@@ -391,9 +391,14 @@ function EmptyState() {
 }
 
 // ─── Main Dashboard Page ──────────────────────────────────
+import { createClient } from "@/lib/supabase/client";
+
+// ... types and configs remain the same ...
+
 function DashboardContent() {
   const searchParams = useSearchParams();
   const projectFilter = searchParams.get("project");
+  const [user, setUser] = useState<{ name: string | null }>({ name: null });
   const [scripts, setScripts] = useState<ScriptCard[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -403,18 +408,37 @@ function DashboardContent() {
   const [isActionLoading, setIsActionLoading] = useState<string | null>(null);
   const [projects, setProjects] = useState<ProjectRow[]>([]);
 
+  const getGreeting = useCallback(() => {
+    const hour = new Date().getHours();
+    if (hour < 12) return { text: "Good morning", icon: "🌅" };
+    if (hour < 17) return { text: "Good afternoon", icon: "☀️" };
+    return { text: "Good evening", icon: "🌙" };
+  }, []);
+
   const loadDashboardData = useCallback(async () => {
     try {
       setLoading(true);
-      const [scriptsResponse, projectsResponse] = await Promise.all([
+      const supabase = createClient();
+      
+      const [scriptsResponse, projectsResponse, { data: { user: supabaseUser } }] = await Promise.all([
         fetch("/api/scripts"),
         fetch("/api/projects"),
+        supabase.auth.getUser(),
       ]);
+
+      if (supabaseUser) {
+        setUser({ 
+          name: supabaseUser.user_metadata?.full_name || 
+                supabaseUser.user_metadata?.name || 
+                supabaseUser.email?.split("@")[0] || 
+                null 
+        });
+      }
 
       const scriptsData = await scriptsResponse.json().catch(() => null);
       const projectsData = await projectsResponse.json().catch(() => null);
 
-       const rows = (scriptsData?.scripts || []) as ScriptRow[];
+      const rows = (scriptsData?.scripts || []) as ScriptRow[];
       const pData = (projectsData || []) as ProjectRow[];
       setProjects(pData);
       const projectMap = new Map(pData.map(p => [p.id, p.name]));
@@ -442,11 +466,14 @@ function DashboardContent() {
   }, []);
 
   useEffect(() => {
-    // Fetch dashboard data on mount
+    let mounted = true;
     const fetchData = async () => {
-      await loadDashboardData();
+      if (mounted) {
+        await loadDashboardData();
+      }
     };
     fetchData();
+    return () => { mounted = false; };
   }, [loadDashboardData]);
 
   const handleDuplicate = async (id: string) => {
@@ -557,6 +584,8 @@ function DashboardContent() {
     [platform, scripts, search, statusFilter, projectFilter]
   );
 
+  const greeting = getGreeting();
+
   return (
     <div className="space-y-8">
       {/* Header */}
@@ -565,7 +594,7 @@ function DashboardContent() {
           className="text-3xl font-black tracking-[-0.03em] mb-1"
           style={{ fontFamily: "var(--font-cabinet)" }}
         >
-          Good evening. 👋
+          {greeting.text}, {user.name || "Creator"}. {greeting.icon}
         </h1>
         <p className="text-sm text-muted-foreground">
           Here&apos;s what&apos;s happening with your content today.
