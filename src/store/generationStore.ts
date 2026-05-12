@@ -23,6 +23,7 @@ export interface GeneratedScript {
   sceneBreakdown: SceneBreakdownItem[];
   viralScore?: number;
   viralAnalysis?: string;
+  generationTimeMs?: number;
 }
 
 interface GenerationState {

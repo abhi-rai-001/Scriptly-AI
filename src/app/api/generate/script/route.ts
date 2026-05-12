@@ -79,6 +79,7 @@ export async function POST(req: NextRequest) {
     // Use a ReadableStream to stream the multi-step JSON responses back
     const stream = new ReadableStream({
       async start(controller) {
+        const startTime = Date.now();
         const sendChunk = (type: string, payload: unknown) => {
           controller.enqueue(new TextEncoder().encode(JSON.stringify({ type, payload }) + "\n"));
         };
@@ -133,6 +134,9 @@ export async function POST(req: NextRequest) {
 
           // Update usage count
           await supabase.rpc("increment_script_count", { user_uuid: user.id });
+
+          const durationMs = Date.now() - startTime;
+          sendChunk("generation_meta", { duration_ms: durationMs });
 
           controller.close();
         } catch (err: unknown) {

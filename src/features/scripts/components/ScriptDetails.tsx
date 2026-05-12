@@ -103,6 +103,7 @@ interface ScriptRecord {
   project_id: string | null;
   viralScore?: number;
   viralAnalysis?: string;
+  generation_time_ms?: number;
 }
 
 type Section = 'title' | 'hook' | 'intro' | 'mainScript' | 'cta' | 'scenes' | 'hashtags' | 'project_id';
@@ -492,6 +493,7 @@ function normalizeScriptResponse(data: Record<string, unknown>, fallbackId: stri
     project_id: typeof data.project_id === "string" ? data.project_id : null,
     viralScore: typeof data.viral_score === "number" ? data.viral_score : undefined,
     viralAnalysis: typeof data.viral_analysis === "string" ? data.viral_analysis : undefined,
+    generation_time_ms: typeof data.generation_time_ms === "number" ? data.generation_time_ms : undefined,
   };
 }
 
@@ -788,24 +790,31 @@ export default function ScriptDetails({ scriptId }: { scriptId: string }) {
   const totalDurationSeconds = Math.round((totalWords / 145) * 60);
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6" data-script-id={scriptId}>
-      {/* Topbar: Back + Actions */}
-      <div className="flex items-center justify-between">
-        <Link
-          href="/dashboard"
-          className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors group"
-        >
-          <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-0.5" />
-          Back to Dashboard
-        </Link>
+    <div className="max-w-6xl mx-auto space-y-8" data-script-id={scriptId}>
+      {/* Topbar: Back + Toggle + Actions */}
+      <div className="flex items-center justify-between px-2 py-4">
+        {/* Left: Navigation */}
+        <div className="w-48">
+          <Link
+            href="/dashboard"
+            className="inline-flex items-center gap-2.5 text-xs font-bold uppercase tracking-widest text-muted-foreground hover:text-foreground transition-all group"
+          >
+            <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center group-hover:bg-white/10 transition-colors">
+              <ArrowLeft className="w-3.5 h-3.5 transition-transform group-hover:-translate-x-0.5" />
+            </div>
+            Back
+          </Link>
+        </div>
 
-        {/* View Mode Toggle */}
-        <div className="flex p-1 bg-white/5 border border-white/10 rounded-2xl">
+        {/* Center: Mode Toggle */}
+        <div className="flex p-1 bg-white/5 border border-white/10 rounded-2xl shadow-inner">
           <button
             onClick={() => setViewMode('story')}
             className={cn(
-              "flex items-center gap-2 px-4 py-1.5 rounded-xl text-xs font-bold transition-all",
-              viewMode === 'story' ? "bg-white/10 text-foreground shadow-lg" : "text-muted-foreground hover:text-foreground"
+              "flex items-center gap-2 px-6 py-2 rounded-xl text-xs font-bold transition-all duration-300",
+              viewMode === 'story' 
+                ? "bg-white/10 text-foreground shadow-[0_0_20px_rgba(255,255,255,0.05)] scale-[1.02]" 
+                : "text-muted-foreground hover:text-foreground hover:bg-white/[0.02]"
             )}
           >
             <Layout className="w-3.5 h-3.5" />
@@ -814,8 +823,10 @@ export default function ScriptDetails({ scriptId }: { scriptId: string }) {
           <button
             onClick={() => setViewMode('pro')}
             className={cn(
-              "flex items-center gap-2 px-4 py-1.5 rounded-xl text-xs font-bold transition-all",
-              viewMode === 'pro' ? "bg-white/10 text-foreground shadow-lg" : "text-muted-foreground hover:text-foreground"
+              "flex items-center gap-2 px-6 py-2 rounded-xl text-xs font-bold transition-all duration-300",
+              viewMode === 'pro' 
+                ? "bg-white/10 text-foreground shadow-[0_0_20px_rgba(255,255,255,0.05)] scale-[1.02]" 
+                : "text-muted-foreground hover:text-foreground hover:bg-white/[0.02]"
             )}
           >
             <TableIcon className="w-3.5 h-3.5" />
@@ -823,74 +834,77 @@ export default function ScriptDetails({ scriptId }: { scriptId: string }) {
           </button>
         </div>
 
-        <div className="flex items-center gap-3">
-          {/* Save State */}
-          <div className={cn(
-            "flex items-center gap-1.5 text-xs font-medium transition-colors",
-            saveState === "saved" ? "text-green-400" : saveState === "saving" ? "text-yellow-400" : "text-muted-foreground"
-          )}>
-            {saveState === "saving" ? (
-              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-            ) : saveState === "saved" ? (
-              <CloudCheck className="w-3.5 h-3.5" />
-            ) : (
-              <Cloud className="w-3.5 h-3.5" />
-            )}
-            {saveState === "saved" ? "All changes saved" : saveState === "saving" ? "Saving..." : "Unsaved changes"}
+        {/* Right: Info & Actions */}
+        <div className="flex items-center gap-6 justify-end w-auto">
+          {/* Status & Timing Metrics */}
+          <div className="flex items-center gap-4 px-4 py-1.5 bg-white/5 border border-white/10 rounded-2xl">
+             <div className="flex items-center gap-2 pr-4 border-r border-white/10" title={script.generation_time_ms ? "Generation Speed" : "Estimated Duration"}>
+                <Zap className="w-3.5 h-3.5 text-amber-400" />
+                <span className="text-[11px] font-black tracking-wider text-foreground">
+                  {script.generation_time_ms 
+                    ? `${(script.generation_time_ms / 1000).toFixed(1)}s`
+                    : formatDuration(totalDurationSeconds)
+                  }
+                </span>
+             </div>
+             <div className={cn(
+                "flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.1em] transition-all",
+                saveState === "saved" ? "text-[oklch(0.72_0.16_160)]" : saveState === "saving" ? "text-amber-400" : "text-muted-foreground"
+              )}>
+                {saveState === "saving" ? (
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                ) : (
+                  <div className={cn("w-1.5 h-1.5 rounded-full", saveState === "saved" ? "bg-[oklch(0.72_0.16_160)] shadow-[0_0_8px_oklch(0.72_0.16_160)]" : "bg-muted-foreground")} />
+                )}
+                {saveState === "saved" ? "Saved" : saveState === "saving" ? "Syncing" : "Unsaved"}
+             </div>
           </div>
 
-          <div className="flex items-center gap-1.5 px-3 py-1.5 bg-white/5 border border-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest text-muted-foreground">
-             <Clock className="w-3 h-3 text-[oklch(0.72_0.16_160)]" />
-             Total: <span className="text-foreground">{formatDuration(totalDurationSeconds)}</span>
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              className="btn-amber border-0 h-10 px-5 rounded-xl font-bold"
+              onClick={() => void handleSaveScript(script.status === "draft" ? "ready" : undefined)}
+              disabled={isSavingScript || isDeletingScript || (saveState === "saved" && script.status !== "draft")}
+            >
+              {isSavingScript ? <Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" /> : <CloudCheck className="w-3.5 h-3.5 mr-2" />}
+              {script.status === "draft" ? "Deploy" : "Update"}
+            </Button>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger render={
+                <Button variant="outline" size="sm" className="h-10 w-10 p-0 border-white/10 bg-white/5 rounded-xl hover:bg-white/10 transition-colors">
+                  <MoreHorizontal className="w-4 h-4" />
+                </Button>
+              } />
+              <DropdownMenuContent align="end" className="bg-card border-white/10 w-48 p-1.5">
+                <DropdownMenuItem 
+                  className="text-xs font-semibold cursor-pointer rounded-lg py-2" 
+                  onClick={() => setExportOpen(true)}
+                >
+                  <Download className="w-3.5 h-3.5 mr-2" />
+                  Export File
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  className="text-xs font-semibold cursor-pointer rounded-lg py-2" 
+                  onClick={handleDuplicate}
+                  disabled={isActionLoading}
+                >
+                  {isActionLoading ? <Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" /> : <Copy className="w-3.5 h-3.5 mr-2" />}
+                  Duplicate Script
+                </DropdownMenuItem>
+                <DropdownMenuSeparator className="bg-white/5 mx-1" />
+                <DropdownMenuItem 
+                  className="text-xs font-semibold text-destructive cursor-pointer focus:text-destructive rounded-lg py-2"
+                  onClick={handleDeleteScript}
+                  disabled={isDeletingScript}
+                >
+                  {isDeletingScript ? <Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" /> : <Trash2 className="w-3.5 h-3.5 mr-2" />}
+                  Delete Permanently
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
-
-          <Button
-            size="sm"
-            className="btn-amber border-0 h-9 rounded-xl"
-            onClick={() => void handleSaveScript(script.status === "draft" ? "ready" : undefined)}
-            disabled={isSavingScript || isDeletingScript || (saveState === "saved" && script.status !== "draft")}
-          >
-            {isSavingScript ? <Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" /> : <CloudCheck className="w-3.5 h-3.5 mr-2" />}
-            {script.status === "draft" ? "Save Script" : "Save Changes"}
-          </Button>
-
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-9 border-white/10 bg-white/5 rounded-xl"
-            onClick={() => setExportOpen(true)}
-          >
-            <Download className="w-3.5 h-3.5 mr-2" />
-            Export
-          </Button>
-
-          {/* More actions */}
-          <DropdownMenu>
-            <DropdownMenuTrigger render={
-              <Button variant="outline" size="sm" className="h-9 w-9 p-0 border-white/10 bg-white/5 rounded-xl">
-                <MoreHorizontal className="w-4 h-4" />
-              </Button>
-            } />
-            <DropdownMenuContent align="end" className="bg-card border-white/10 w-40">
-              <DropdownMenuItem 
-                className="text-sm cursor-pointer" 
-                onClick={handleDuplicate}
-                disabled={isActionLoading}
-              >
-                {isActionLoading ? <Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" /> : <Copy className="w-3.5 h-3.5 mr-2" />}
-                Duplicate
-              </DropdownMenuItem>
-              <DropdownMenuSeparator className="bg-white/10" />
-              <DropdownMenuItem 
-                className="text-sm text-destructive cursor-pointer focus:text-destructive"
-                onClick={handleDeleteScript}
-                disabled={isDeletingScript}
-              >
-                {isDeletingScript ? <Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" /> : <Trash2 className="w-3.5 h-3.5 mr-2" />}
-                {isDeletingScript ? "Deleting..." : "Delete Script"}
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
         </div>
       </div>
 

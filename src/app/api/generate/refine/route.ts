@@ -22,15 +22,21 @@ export async function POST(req: NextRequest) {
 
     const result = await textModel.generateContent({
       contents: [{ role: "user", parts: [{ text: prompt }] }],
-      generationConfig: { temperature: 0.7 },
+      generationConfig: { temperature: 0.7, maxOutputTokens: 1000 },
     });
 
-    const refinedText = result.response.text().trim();
+    if (!result.response || !result.response.text) {
+      throw new Error("Empty response from AI model");
+    }
+
+    const responseText = result.response.text();
+    const refinedText = responseText.replace(/^["']|["']$/g, "").trim();
 
     return NextResponse.json({ refinedText });
 
   } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Generation failed";
     console.error("Refinement Error:", error);
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

@@ -438,10 +438,10 @@ function DashboardContent() {
       const scriptsData = await scriptsResponse.json().catch(() => null);
       const projectsData = await projectsResponse.json().catch(() => null);
 
-      const rows = (scriptsData?.scripts || []) as ScriptRow[];
-      const pData = (projectsData || []) as ProjectRow[];
+      const rows = (Array.isArray(scriptsData?.scripts) ? scriptsData.scripts : []) as ScriptRow[];
+      const pData = (Array.isArray(projectsData) ? projectsData : []) as ProjectRow[];
       setProjects(pData);
-      const projectMap = new Map(pData.map(p => [p.id, p.name]));
+      const projectMap = new Map(pData.map((p) => [p.id, p.name]));
 
       const mappedScripts: ScriptCard[] = rows.map((script) => ({
         id: script.id,

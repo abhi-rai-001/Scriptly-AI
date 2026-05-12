@@ -45,6 +45,7 @@ type GenerationChunkType =
   | "full_script"
   | "scene_breakdown"
   | "hashtags"
+  | "generation_meta"
   | "error";
 
 interface StreamChunk {
@@ -566,6 +567,7 @@ export default function GeneratePage() {
       status: "ready",
       viral_score: result.viralScore,
       viral_analysis: result.viralAnalysis,
+      generation_time_ms: result.generationTimeMs,
     };
 
     try {
@@ -678,6 +680,11 @@ export default function GeneratePage() {
             draft.hashtags = (chunk.payload as unknown[]).filter((item): item is string => typeof item === "string");
             break;
           }
+          case "generation_meta": {
+            const payload = chunk.payload as { duration_ms?: number };
+            draft.generationTimeMs = payload.duration_ms;
+            break;
+          }
           case "error": {
             const payload = chunk.payload as { message?: string };
             throw new Error(payload?.message || "Generation failed");
@@ -718,6 +725,7 @@ export default function GeneratePage() {
         sceneBreakdown: draft.sceneBreakdown || [],
         viralScore: draft.viralScore,
         viralAnalysis: draft.viralAnalysis,
+        generationTimeMs: draft.generationTimeMs,
       };
 
       setResult(finalResult);
@@ -754,6 +762,7 @@ export default function GeneratePage() {
       thumbnail_base64: (!thumbnailUrl && thumbnailImage) ? thumbnailImage : undefined,
       viral_score: result.viralScore,
       viral_analysis: result.viralAnalysis,
+      generation_time_ms: result.generationTimeMs,
     };
 
     try {
