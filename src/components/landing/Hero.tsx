@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
+import Image from "next/image";
 import { Sparkles } from "lucide-react";
 
 interface HeroProps {
@@ -187,10 +188,11 @@ export default function Hero({ isAuthenticated }: HeroProps) {
                     className="w-7 h-7 rounded-full border-2 border-background overflow-hidden"
                     style={{ zIndex: 5 - i }}
                   >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
+                    <Image
                       src={`https://api.dicebear.com/7.x/notionists/svg?seed=${name}&backgroundColor=8b5cf6`}
                       alt={name}
+                      width={28}
+                      height={28}
                       className="w-full h-full"
                     />
                   </div>

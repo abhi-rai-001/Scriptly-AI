@@ -11,6 +11,7 @@ import {
   Loader2,
   Sparkles,
 } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -57,6 +58,7 @@ export default function ThumbnailGeneratorPage() {
     setThumbnailImage,
     setThumbnailUrl,
     setThumbnailStoragePath,
+    savedScriptId,
   } = useGenerationStore();
   const [title, setTitle] = useState(result?.title ?? "");
   const [hook, setHook] = useState(result?.hook ?? "");
@@ -65,6 +67,7 @@ export default function ThumbnailGeneratorPage() {
   const [customPrompt, setCustomPrompt] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   const canGenerate = useMemo(
     () => title.trim().length > 0 && hook.trim().length > 0 && niche.trim().length > 0,
@@ -121,6 +124,41 @@ export default function ThumbnailGeneratorPage() {
     const blob = await response.blob();
     const extension = blob.type === "image/png" ? "png" : blob.type === "image/jpeg" ? "jpg" : "webp";
     downloadBlob(blob, `${slugify(title)}.${extension}`, blob.type || "image/webp");
+  };
+  
+  const handleSaveAsPreview = async () => {
+    if (!savedScriptId || !thumbnailUrl) return;
+
+    setIsSaving(true);
+    try {
+      const payload: any = {};
+      if (thumbnailUrl) {
+        payload.thumbnail_url = thumbnailUrl;
+      } else if (thumbnailImage) {
+        payload.thumbnail_base64 = thumbnailImage;
+      }
+
+      if (Object.keys(payload).length === 0) {
+        throw new Error("No thumbnail data to save");
+      }
+
+      const response = await fetch(`/api/scripts/${savedScriptId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await response.json().catch(() => null);
+      if (!response.ok) {
+        throw new Error(data?.error || data?.message || "Failed to update preview");
+      }
+
+      toast.success("Thumbnail set as script preview!");
+    } catch (err) {
+      toast.error(getErrorMessage(err));
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -237,6 +275,17 @@ export default function ThumbnailGeneratorPage() {
               <Download className="w-4 h-4 mr-2" />
               Download PNG
             </Button>
+
+            {savedScriptId && (
+              <Button 
+                onClick={handleSaveAsPreview} 
+                disabled={(!thumbnailUrl && !thumbnailImage) || isSaving} 
+                className="w-full btn-primary h-11 rounded-xl font-bold"
+              >
+                {isSaving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <ImageIcon className="w-4 h-4 mr-2" />}
+                Save as Script Preview
+              </Button>
+            )}
           </div>
         </div>
       </div>

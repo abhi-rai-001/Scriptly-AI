@@ -63,6 +63,8 @@ export const metadata: Metadata = {
   },
 };
 
+import { Toaster } from "sonner";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -75,6 +77,18 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col bg-background text-foreground">
         {children}
+        <Toaster 
+          richColors 
+          position="bottom-right" 
+          toastOptions={{
+            style: {
+              background: 'oklch(0.15 0.02 285)',
+              border: '1px solid oklch(0.3 0.05 285 / 0.2)',
+              color: 'white',
+              fontFamily: 'var(--font-satoshi)',
+            }
+          }}
+        />
       </body>
     </html>
   );

@@ -1,6 +1,7 @@
 "use client";
 
 import { Star } from "lucide-react";
+import Image from "next/image";
 
 const testimonials = [
   {
@@ -84,11 +85,12 @@ function TestimonialCard({ t }: { t: typeof testimonials[0] }) {
       </p>
       {/* Author */}
       <div className="flex items-center gap-3 mt-auto">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
+        <Image
           src={`https://api.dicebear.com/7.x/notionists/svg?seed=${t.seed}&backgroundColor=8b5cf6`}
           alt={t.name}
-          className="w-9 h-9 rounded-full border border-white/10"
+          width={36}
+          height={36}
+          className="rounded-full border border-white/10"
         />
         <div>
           <p className="text-sm font-semibold text-foreground">{t.name}</p>

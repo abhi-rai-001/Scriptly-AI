@@ -1,5 +1,6 @@
 import { ReactNode } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { Star } from "lucide-react";
 
 const testimonials = [
@@ -89,11 +90,12 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
             &ldquo;{testimonial.quote}&rdquo;
           </p>
           <div className="flex items-center gap-3">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
+            <Image
               src={`https://api.dicebear.com/7.x/notionists/svg?seed=${testimonial.seed}&backgroundColor=8b5cf6`}
               alt={testimonial.name}
-              className="w-10 h-10 rounded-full border border-white/10"
+              width={40}
+              height={40}
+              className="rounded-full border border-white/10"
             />
             <div>
               <p className="font-semibold text-sm text-foreground">{testimonial.name}</p>

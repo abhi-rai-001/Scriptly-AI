@@ -1,6 +1,12 @@
 import { ReactNode } from "react";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Topbar } from "@/components/layout/Topbar";
+import { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Dashboard",
+  description: "Manage your AI-generated scripts and projects.",
+};
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   return (

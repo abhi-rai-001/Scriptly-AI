@@ -87,6 +87,7 @@ export function Topbar() {
         {/* New Script CTA */}
         <button
           onClick={handleNewScript}
+          aria-label="Create new script"
           className={cn(
             "btn-amber h-9 px-4 rounded-xl text-sm font-bold inline-flex items-center gap-1.5"
           )}

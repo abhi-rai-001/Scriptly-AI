@@ -3,6 +3,7 @@
 import { useState, useCallback, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { Document, HeadingLevel, Packer, Paragraph, TextRun } from "docx";
 import {
   ArrowLeft,
@@ -902,10 +903,12 @@ export default function ScriptDetails({ scriptId }: { scriptId: string }) {
              <div className="absolute -inset-2 bg-gradient-to-r from-primary/20 to-secondary/20 rounded-[2rem] blur-xl opacity-50 group-hover/thumb:opacity-100 transition-opacity duration-500" />
              <div className="relative aspect-[16/9] w-full rounded-2xl overflow-hidden border border-white/10 bg-black/40 shadow-2xl">
               {script.thumbnail_url || script.thumbnail_base64 ? (
-                <img
+                <Image
                   src={script.thumbnail_url ?? (script.thumbnail_base64?.startsWith('data:') ? script.thumbnail_base64 : `data:image/webp;base64,${script.thumbnail_base64}`)}
                   alt="Thumbnail"
-                  className="w-full h-full object-cover transition-transform duration-700 group-hover/thumb:scale-110"
+                  fill
+                  className="object-cover transition-transform duration-700 group-hover/thumb:scale-110"
+                  unoptimized={!!script.thumbnail_base64}
                 />
               ) : (
                 <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-muted-foreground/40">

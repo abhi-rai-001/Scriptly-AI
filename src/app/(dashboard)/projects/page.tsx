@@ -224,6 +224,8 @@ function EmptyState({ onNew }: { onNew: () => void }) {
   );
 }
 
+import { toast } from "sonner";
+
 // ─── Main Projects Page ───────────────────────────────────
 export default function ProjectsPage() {
   const [projects, setProjects] = useState<Project[]>([]);
@@ -283,7 +285,9 @@ export default function ProjectsPage() {
       if (!res.ok) throw new Error("Failed to create project");
       await fetchProjects();
       setShowCreate(false);
+      toast.success("Project created successfully");
     } catch (err) {
+      toast.error("Failed to create project");
       console.error(err);
     }
   };
@@ -297,7 +301,9 @@ export default function ProjectsPage() {
       });
       if (!res.ok) throw new Error("Failed to rename project");
       await fetchProjects();
+      toast.success("Project renamed");
     } catch (err) {
+      toast.error("Failed to rename project");
       console.error(err);
     }
   };
@@ -308,7 +314,9 @@ export default function ProjectsPage() {
       const res = await fetch(`/api/projects/${id}`, { method: "DELETE" });
       if (!res.ok) throw new Error("Failed to delete project");
       await fetchProjects();
+      toast.success("Project deleted");
     } catch (err) {
+      toast.error("Failed to delete project");
       console.error(err);
     }
   };

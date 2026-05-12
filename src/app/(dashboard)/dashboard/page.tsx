@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useGenerationStore } from "@/store/generationStore";
+import { toast } from "sonner";
 import {
   FileVideo,
   TrendingUp,
@@ -162,6 +163,9 @@ function StatCard({ label, value, icon: Icon, delta, accent, onClick, active }: 
         "lux-card rounded-2xl p-5 flex flex-col gap-3 cursor-pointer transition-all duration-300",
         active ? "ring-2 ring-primary/40 border-primary/20" : "hover:border-white/15"
       )}
+      role="button"
+      aria-pressed={active}
+      aria-label={`Filter by ${label}`}
       style={{ borderTop: `2px solid ${accent}${active ? '80' : '30'}` }}
     >
       <div className="flex items-center justify-between">
@@ -451,9 +455,10 @@ function DashboardContent() {
       const res = await fetch(`/api/scripts/${id}/duplicate`, { method: "POST" });
       if (!res.ok) throw new Error("Failed to duplicate");
       await loadDashboardData();
+      toast.success("Script duplicated");
     } catch (err) {
       console.error(err);
-      alert("Failed to duplicate script");
+      toast.error("Failed to duplicate script");
     } finally {
       setIsActionLoading(null);
     }
@@ -469,9 +474,10 @@ function DashboardContent() {
       });
       if (!res.ok) throw new Error("Failed to move script");
       await loadDashboardData();
+      toast.success("Script moved successfully");
     } catch (err) {
       console.error(err);
-      alert("Failed to move script");
+      toast.error("Failed to move script");
     } finally {
       setIsActionLoading(null);
     }
@@ -484,9 +490,10 @@ function DashboardContent() {
       const res = await fetch(`/api/scripts/${id}`, { method: "DELETE" });
       if (!res.ok) throw new Error("Failed to delete");
       await loadDashboardData();
+      toast.success("Script deleted");
     } catch (err) {
       console.error(err);
-      alert("Failed to delete script");
+      toast.error("Failed to delete script");
     } finally {
       setIsActionLoading(null);
     }
