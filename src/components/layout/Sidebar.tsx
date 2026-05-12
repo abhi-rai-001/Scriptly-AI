@@ -47,7 +47,7 @@ export function Sidebar() {
       if (!res.ok) return;
       const data = await res.json();
       
-      const mapped = (data || []).slice(0, 5).map((p: any, i: number) => ({
+      const mapped = (data || []).slice(0, 5).map((p: { id: string; name: string }, i: number) => ({
         id: p.id,
         name: p.name,
         color: PROJECT_COLORS[i % PROJECT_COLORS.length]
@@ -61,7 +61,10 @@ export function Sidebar() {
   }, []);
 
   useEffect(() => {
-    fetchRecentProjects();
+    // Avoid synchronous state updates in effect to prevent cascading renders
+    Promise.resolve().then(() => {
+      fetchRecentProjects();
+    });
   }, [fetchRecentProjects]);
 
   return (

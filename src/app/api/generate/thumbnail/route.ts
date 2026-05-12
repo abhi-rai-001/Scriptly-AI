@@ -46,7 +46,7 @@ export async function POST(req: NextRequest) {
           inputs: prompt,
         }, {
           wait_for_model: true,
-        } as any) as any;
+        } as unknown as Record<string, unknown>) as unknown as Blob;
 
         if (typeof imageResult === "string") {
           const response = await fetch(imageResult);

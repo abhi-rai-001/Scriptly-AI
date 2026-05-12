@@ -247,7 +247,7 @@ export default function ProjectsPage() {
       if (!res.ok) throw new Error("Failed to load projects");
       const data = await res.json();
       
-      const mapped = (data || []).map((p: any, i: number) => {
+      const mapped = (data || []).map((p: { id: string; name: string; updated_at: string; scripts: { count: number }[] }, i: number) => {
         const accent = ACCENT_COLORS[i % ACCENT_COLORS.length];
         const scriptCount = p.scripts?.[0]?.count || 0;
         return {
@@ -267,7 +267,10 @@ export default function ProjectsPage() {
   }, []);
 
   useEffect(() => {
-    fetchProjects();
+    // Avoid synchronous state updates in effect
+    Promise.resolve().then(() => {
+      fetchProjects();
+    });
   }, [fetchProjects]);
 
   const handleCreate = async (name: string) => {

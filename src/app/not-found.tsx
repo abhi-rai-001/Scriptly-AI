@@ -35,7 +35,7 @@ export default function NotFound() {
           </h1>
 
           <p className="text-lg text-muted-foreground mb-12 max-w-lg mx-auto leading-relaxed">
-            The page you're looking for doesn't exist yet, but something incredible is being built right here. Stay tuned for new AI features.
+            The page you&apos;re looking for doesn&apos;t exist yet, but something incredible is being built right here. Stay tuned for new AI features.
           </p>
 
           <div className="grid sm:grid-cols-2 gap-4 max-w-md mx-auto mb-16">

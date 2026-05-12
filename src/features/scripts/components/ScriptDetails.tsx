@@ -787,7 +787,7 @@ export default function ScriptDetails({ scriptId }: { scriptId: string }) {
                 <h3 className="text-sm font-bold uppercase tracking-wider">AI Strategy Analysis</h3>
               </div>
               <p className="text-sm text-foreground/80 leading-relaxed italic">
-                "{script.viralAnalysis || "Our AI predicts this script has high retention potential due to its punchy hook and clear problem-solution framework."}"
+                &quot;{script.viralAnalysis || "Our AI predicts this script has high retention potential due to its punchy hook and clear problem-solution framework."}&quot;
               </p>
             </div>
           </div>

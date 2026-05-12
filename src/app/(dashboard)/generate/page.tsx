@@ -382,7 +382,9 @@ export default function GeneratePage() {
     setResult,
     resetAll,
     thumbnailImage,
+    setThumbnailImage,
     thumbnailUrl,
+    setThumbnailUrl,
     savedScriptId,
     setSavedScriptId,
   } = useGenerationStore();
