@@ -26,7 +26,13 @@ import {
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
 import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
+import { cn, getReadingTime, formatDuration } from "@/lib/utils";
+import {
+  GripVertical,
+  Layout,
+  Table as TableIcon,
+  Wand2,
+} from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -283,8 +289,10 @@ function EditableText({
         className
       )}
     >
-      <span className="flex-1">{value}</span>
-      <Pencil className="w-3 h-3 text-muted-foreground/30 opacity-0 group-hover/text:opacity-100 transition-opacity flex-shrink-0 mt-0.5" />
+      <span className="flex-1 whitespace-pre-wrap">{value}</span>
+      <div className="flex items-center gap-1 opacity-0 group-hover/text:opacity-100 transition-opacity flex-shrink-0 mt-0.5">
+        <Pencil className="w-3 h-3 text-muted-foreground/30" />
+      </div>
     </div>
   );
 }
@@ -302,8 +310,10 @@ function SectionBlock({
   content: string | string[];
   isArray?: boolean;
   onChange: (v: string | string[]) => void;
+  onRefine?: (content: string, instruction: string) => Promise<string>;
 }) {
   const [copied, setCopied] = useState(false);
+  const [refining, setRefining] = useState(false);
 
   const text = Array.isArray(content) ? content.join("\n\n") : content;
   const handleCopy = async () => {
@@ -320,8 +330,66 @@ function SectionBlock({
           style={{ fontFamily: "var(--font-cabinet)" }}
         >
           {emoji} {label}
+          {content && !isArray && typeof content === "string" && (
+            <span className="ml-3 normal-case font-medium text-[oklch(0.72_0.16_160)] bg-[oklch(0.72_0.16_160_/_10%)] px-2 py-0.5 rounded-full text-[10px]">
+              {formatDuration(getReadingTime(content))}
+            </span>
+          )}
         </h3>
         <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+          <DropdownMenu>
+            <DropdownMenuTrigger render={
+              <button
+                className="w-8 h-8 rounded-xl bg-white/5 hover:bg-white/10 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors group/magic disabled:opacity-50"
+                title="Refine with AI"
+                disabled={refining}
+              >
+                {refining ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Wand2 className="w-3.5 h-3.5 group-hover/magic:text-[oklch(0.72_0.20_285)] transition-colors" />}
+              </button>
+            } />
+            <DropdownMenuContent align="end" className="bg-card border-white/10 w-48">
+              <div className="px-3 py-2 text-[10px] font-black uppercase tracking-widest text-muted-foreground">AI Refinement</div>
+              <DropdownMenuItem 
+                className="text-xs cursor-pointer gap-2"
+                onClick={async () => {
+                  if (!onRefine || isArray) return;
+                  setRefining(true);
+                  const result = await onRefine(text, "Make it more punchy, viral, and high-energy.");
+                  onChange(result);
+                  setRefining(false);
+                }}
+              >
+                <Zap className="w-3 h-3 text-yellow-400" />
+                Make it Punchy
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                className="text-xs cursor-pointer gap-2"
+                onClick={async () => {
+                  if (!onRefine || isArray) return;
+                  setRefining(true);
+                  const result = await onRefine(text, "Shorten this significantly while keeping the core message.");
+                  onChange(result);
+                  setRefining(false);
+                }}
+              >
+                <Clock className="w-3 h-3 text-blue-400" />
+                Shorten Section
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                className="text-xs cursor-pointer gap-2"
+                onClick={async () => {
+                  if (!onRefine || isArray) return;
+                  setRefining(true);
+                  const result = await onRefine(text, "Add a touch of humor or relatable irony to this section.");
+                  onChange(result);
+                  setRefining(false);
+                }}
+              >
+                <Sparkles className="w-3 h-3 text-pink-400" />
+                Add Humor
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <button
             onClick={handleCopy}
             className="w-8 h-8 rounded-xl bg-white/5 hover:bg-white/10 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
@@ -329,19 +397,13 @@ function SectionBlock({
           >
             {copied ? <Check className="w-3.5 h-3.5 text-[oklch(0.72_0.16_160)]" /> : <Copy className="w-3.5 h-3.5" />}
           </button>
-          <button
-            className="w-8 h-8 rounded-xl bg-white/5 hover:bg-white/10 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
-            title="Regenerate section"
-          >
-            <RefreshCw className="w-3.5 h-3.5" />
-          </button>
         </div>
       </div>
 
       {isArray && Array.isArray(content) ? (
         <ul className="space-y-3">
           {content.map((item, i) => (
-            <li key={i} className="flex items-start gap-2.5">
+            <li key={i} className="flex items-start gap-2.5 group/item">
               <span className="text-primary/50 mt-0.5 text-xs flex-shrink-0 font-bold">{String(i + 1).padStart(2, "0")}.</span>
               <EditableText
                 value={item}
@@ -353,6 +415,27 @@ function SectionBlock({
                 multiline
                 className="flex-1"
               />
+              <DropdownMenu>
+                <DropdownMenuTrigger render={
+                  <button className="opacity-0 group-hover/item:opacity-100 p-1 hover:bg-white/5 rounded text-muted-foreground transition-opacity">
+                    <Wand2 className="w-3 h-3" />
+                  </button>
+                } />
+                <DropdownMenuContent align="end" className="bg-card border-white/10 w-40">
+                  <DropdownMenuItem 
+                    className="text-[10px] cursor-pointer"
+                    onClick={async () => {
+                      if (!onRefine) return;
+                      const result = await onRefine(item, "Make this line more punchy.");
+                      const updated = [...content] as string[];
+                      updated[i] = result;
+                      onChange(updated);
+                    }}
+                  >
+                    Refine Item
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </li>
           ))}
         </ul>
@@ -426,6 +509,7 @@ export default function ScriptDetails({ scriptId }: { scriptId: string }) {
   const [isDeletingScript, setIsDeletingScript] = useState(false);
   const [projects, setProjects] = useState<{ id: string; name: string }[]>([]);
   const [loadingProjects, setLoadingProjects] = useState(false);
+  const [viewMode, setViewMode] = useState<'story' | 'pro'>('story');
 
   useEffect(() => {
     async function fetchProjects() {
@@ -535,6 +619,27 @@ export default function ScriptDetails({ scriptId }: { scriptId: string }) {
       setIsSavingScript(false);
     }
   }, [isSavingScript, script]);
+
+  const handleRefine = useCallback(async (content: string, instruction: string) => {
+    if (!script) return content;
+    try {
+      const res = await fetch("/api/generate/refine", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          content,
+          instruction,
+          context: { platform: script.platform, niche: script.niche }
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      return data.refinedText;
+    } catch (err) {
+      console.error("Refinement failed", err);
+      return content;
+    }
+  }, [script]);
 
   const handleDeleteScript = useCallback(async () => {
     if (!script || isDeletingScript) return;
@@ -673,6 +778,15 @@ export default function ScriptDetails({ scriptId }: { scriptId: string }) {
   const status = STATUS_CONFIG[script.status];
   const PlatformIcon = platform.icon;
 
+  const totalWords = [
+    script.hook,
+    script.intro,
+    ...script.mainScript,
+    script.cta
+  ].join(" ").trim().split(/\s+/).length;
+  
+  const totalDurationSeconds = Math.round((totalWords / 145) * 60);
+
   return (
     <div className="max-w-4xl mx-auto space-y-6" data-script-id={scriptId}>
       {/* Topbar: Back + Actions */}
@@ -684,6 +798,30 @@ export default function ScriptDetails({ scriptId }: { scriptId: string }) {
           <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-0.5" />
           Back to Dashboard
         </Link>
+
+        {/* View Mode Toggle */}
+        <div className="flex p-1 bg-white/5 border border-white/10 rounded-2xl">
+          <button
+            onClick={() => setViewMode('story')}
+            className={cn(
+              "flex items-center gap-2 px-4 py-1.5 rounded-xl text-xs font-bold transition-all",
+              viewMode === 'story' ? "bg-white/10 text-foreground shadow-lg" : "text-muted-foreground hover:text-foreground"
+            )}
+          >
+            <Layout className="w-3.5 h-3.5" />
+            Story
+          </button>
+          <button
+            onClick={() => setViewMode('pro')}
+            className={cn(
+              "flex items-center gap-2 px-4 py-1.5 rounded-xl text-xs font-bold transition-all",
+              viewMode === 'pro' ? "bg-white/10 text-foreground shadow-lg" : "text-muted-foreground hover:text-foreground"
+            )}
+          >
+            <TableIcon className="w-3.5 h-3.5" />
+            Pro Script
+          </button>
+        </div>
 
         <div className="flex items-center gap-3">
           {/* Save State */}
@@ -699,6 +837,11 @@ export default function ScriptDetails({ scriptId }: { scriptId: string }) {
               <Cloud className="w-3.5 h-3.5" />
             )}
             {saveState === "saved" ? "All changes saved" : saveState === "saving" ? "Saving..." : "Unsaved changes"}
+          </div>
+
+          <div className="flex items-center gap-1.5 px-3 py-1.5 bg-white/5 border border-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+             <Clock className="w-3 h-3 text-[oklch(0.72_0.16_160)]" />
+             Total: <span className="text-foreground">{formatDuration(totalDurationSeconds)}</span>
           </div>
 
           <Button
@@ -757,42 +900,194 @@ export default function ScriptDetails({ scriptId }: { scriptId: string }) {
         </div>
       ) : null}
 
-      {/* Viral Prediction Card */}
-      {script.viralScore !== undefined && (
-        <motion.div 
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="lux-card p-6 rounded-2xl overflow-hidden relative mb-8"
-        >
-          <div className="absolute top-0 right-0 p-4 opacity-10">
-            <TrendingUp className="w-24 h-24" />
+      {/* Main Content Area */}
+      {viewMode === 'pro' ? (
+        <div className="lux-card rounded-2xl overflow-hidden border-white/10">
+          <div className="grid grid-cols-[100px_1fr_1.5fr] bg-white/5 border-b border-white/10">
+            <div className="px-4 py-3 text-[10px] font-black uppercase tracking-widest text-muted-foreground">Type</div>
+            <div className="px-4 py-3 text-[10px] font-black uppercase tracking-widest text-muted-foreground border-l border-white/10">Visuals / Scene</div>
+            <div className="px-4 py-3 text-[10px] font-black uppercase tracking-widest text-muted-foreground border-l border-white/10">Audio / Speech</div>
           </div>
-          <div className="flex flex-col md:flex-row gap-6 relative z-10">
-            <div className="flex flex-col items-center justify-center p-4 rounded-xl bg-[oklch(0.62_0.24_285_/_8%)] border border-[oklch(0.62_0.24_285_/_15%)] min-w-[120px]">
-              <div className="text-sm font-bold text-[oklch(0.72_0.20_285)] mb-1">Viral Potential</div>
-              <div className="text-4xl font-black text-foreground tracking-tighter" style={{ fontFamily: "var(--font-cabinet)" }}>
-                {script.viralScore}%
+          <div className="divide-y divide-white/5">
+            {/* Hook */}
+            <div className="grid grid-cols-[100px_1fr_1.5fr]">
+              <div className="px-4 py-6 text-[10px] font-bold text-[oklch(0.62_0.24_285)] uppercase">Hook</div>
+              <div className="px-4 py-6 border-l border-white/10 text-xs text-muted-foreground italic">
+                Focus on high-energy visuals.
               </div>
-              <div className="w-full h-1.5 bg-white/5 rounded-full mt-3 overflow-hidden">
-                <motion.div 
-                  initial={{ width: 0 }}
-                  animate={{ width: `${script.viralScore}%` }}
-                  transition={{ duration: 1, ease: "easeOut" }}
-                  className="h-full bg-gradient-to-r from-[oklch(0.62_0.24_285)] to-[oklch(0.72_0.20_285)]" 
+              <div className="px-4 py-6 border-l border-white/10 flex items-start gap-2">
+                <EditableText 
+                  value={script.hook} 
+                  onChange={(v) => updateField('hook', v)} 
+                  className="bg-transparent border-0 p-0 hover:bg-transparent flex-1"
                 />
+                 <button
+                  onClick={async () => {
+                    const result = await handleRefine(script.hook, "Make it more punchy.");
+                    updateField('hook', result);
+                  }}
+                  className="p-1 hover:bg-white/10 rounded text-muted-foreground transition-colors"
+                >
+                  <Wand2 className="w-3 h-3" />
+                </button>
               </div>
             </div>
-            <div className="flex-1">
-              <div className="flex items-center gap-2 mb-2 text-[oklch(0.72_0.20_285)]">
-                <Zap className="w-4 h-4" />
-                <h3 className="text-sm font-bold uppercase tracking-wider">AI Strategy Analysis</h3>
+            {/* Intro */}
+            <div className="grid grid-cols-[100px_1fr_1.5fr]">
+              <div className="px-4 py-6 text-[10px] font-bold text-[oklch(0.72_0.16_160)] uppercase">Intro</div>
+              <div className="px-4 py-6 border-l border-white/10 text-xs text-muted-foreground italic">
+                Set the scene.
               </div>
-              <p className="text-sm text-foreground/80 leading-relaxed italic">
-                &quot;{script.viralAnalysis || "Our AI predicts this script has high retention potential due to its punchy hook and clear problem-solution framework."}&quot;
-              </p>
+              <div className="px-4 py-6 border-l border-white/10 flex items-start gap-2">
+                <EditableText 
+                  value={script.intro} 
+                  onChange={(v) => updateField('intro', v)} 
+                  className="bg-transparent border-0 p-0 hover:bg-transparent flex-1"
+                />
+                <button
+                  onClick={async () => {
+                    const result = await handleRefine(script.intro, "Shorten this intro.");
+                    updateField('intro', result);
+                  }}
+                  className="p-1 hover:bg-white/10 rounded text-muted-foreground transition-colors"
+                >
+                  <Wand2 className="w-3 h-3" />
+                </button>
+              </div>
             </div>
+            {/* Main Script Blocks */}
+            {script.mainScript.map((line, i) => (
+              <div key={i} className="grid grid-cols-[100px_1fr_1.5fr]">
+                <div className="px-4 py-6 text-[10px] font-bold text-muted-foreground uppercase">Scene {i + 1}</div>
+                <div className="px-4 py-6 border-l border-white/10 text-xs text-foreground/70">
+                   <EditableText 
+                    value={script.scenes[i] || "Visual direction pending..."} 
+                    onChange={(v) => {
+                      const updated = [...script.scenes];
+                      updated[i] = v;
+                      updateField('scenes', updated);
+                    }} 
+                    className="bg-transparent border-0 p-0 hover:bg-transparent text-xs"
+                  />
+                </div>
+                <div className="px-4 py-6 border-l border-white/10 flex items-start gap-2">
+                  <EditableText 
+                    value={line} 
+                    onChange={(v) => {
+                      const updated = [...script.mainScript];
+                      updated[i] = v;
+                      updateField('mainScript', updated);
+                    }} 
+                    className="bg-transparent border-0 p-0 hover:bg-transparent flex-1"
+                  />
+                  <button
+                    onClick={async () => {
+                      const result = await handleRefine(line, "Make this line flow better.");
+                      const updated = [...script.mainScript];
+                      updated[i] = result;
+                      updateField('mainScript', updated);
+                    }}
+                    className="p-1 hover:bg-white/10 rounded text-muted-foreground transition-colors"
+                  >
+                    <Wand2 className="w-3 h-3" />
+                  </button>
+                </div>
+              </div>
+            ))}
           </div>
-        </motion.div>
+        </div>
+      ) : (
+        <div className="space-y-6">
+          {/* Viral Prediction Card (only in Story mode) */}
+          {script.viralScore !== undefined && (
+            <motion.div 
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="lux-card p-6 rounded-2xl overflow-hidden relative mb-8"
+            >
+              {/* ... Viral Score Content ... */}
+              <div className="absolute top-0 right-0 p-4 opacity-10">
+                <TrendingUp className="w-24 h-24" />
+              </div>
+              <div className="flex flex-col md:flex-row gap-6 relative z-10">
+                <div className="flex flex-col items-center justify-center p-4 rounded-xl bg-[oklch(0.62_0.24_285_/_8%)] border border-[oklch(0.62_0.24_285_/_15%)] min-w-[120px]">
+                  <div className="text-sm font-bold text-[oklch(0.72_0.20_285)] mb-1">Viral Potential</div>
+                  <div className="text-4xl font-black text-foreground tracking-tighter" style={{ fontFamily: "var(--font-cabinet)" }}>
+                    {script.viralScore}%
+                  </div>
+                  <div className="w-full h-1.5 bg-white/5 rounded-full mt-3 overflow-hidden">
+                    <motion.div 
+                      initial={{ width: 0 }}
+                      animate={{ width: `${script.viralScore}%` }}
+                      transition={{ duration: 1, ease: "easeOut" }}
+                      className="h-full bg-gradient-to-r from-[oklch(0.62_0.24_285)] to-[oklch(0.72_0.20_285)]" 
+                    />
+                  </div>
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-2 text-[oklch(0.72_0.20_285)]">
+                    <Zap className="w-4 h-4" />
+                    <h3 className="text-sm font-bold uppercase tracking-wider">AI Strategy Analysis</h3>
+                  </div>
+                  <p className="text-sm text-foreground/80 leading-relaxed italic">
+                    &quot;{script.viralAnalysis || "Our AI predicts this script has high retention potential due to its punchy hook and clear problem-solution framework."}&quot;
+                  </p>
+                </div>
+              </div>
+            </motion.div>
+          )}
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <SectionBlock
+              label="Hook"
+              emoji="🪝"
+              content={script.hook}
+              onChange={(v) => updateField("hook", v)}
+              onRefine={handleRefine}
+            />
+            <SectionBlock
+              label="Intro"
+              emoji="📣"
+              content={script.intro}
+              onChange={(v) => updateField("intro", v)}
+              onRefine={handleRefine}
+            />
+          </div>
+
+          <SectionBlock
+            label="Main Script"
+            emoji="📝"
+            content={script.mainScript}
+            isArray
+            onChange={(v) => updateField("mainScript", v)}
+            onRefine={handleRefine}
+          />
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <SectionBlock
+              label="Call to Action"
+              emoji="💥"
+              content={script.cta}
+              onChange={(v) => updateField("cta", v)}
+              onRefine={handleRefine}
+            />
+            <SectionBlock
+              label="Hashtags"
+              emoji="#"
+              content={script.hashtags}
+              isArray
+              onChange={(v) => updateField("hashtags", v)}
+            />
+          </div>
+
+          <SectionBlock
+            label="Visual Directions"
+            emoji="🎬"
+            content={script.scenes}
+            isArray
+            onChange={(v) => updateField("scenes", v)}
+          />
+        </div>
       )}
 
       <Dialog open={exportOpen} onOpenChange={setExportOpen}>
