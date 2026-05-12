@@ -594,10 +594,6 @@ export default function GeneratePage() {
         toast.success(savedScriptId ? "Script updated!" : "Script saved!");
       });
       
-      setStep(0);
-      setResult(null);
-      setThumbnailImage(null);
-      setThumbnailUrl(null);
       setSaveError(null);
     } catch (saveScriptError: unknown) {
       setSaveError(saveScriptError instanceof Error ? saveScriptError.message : "Failed to save script");
@@ -789,10 +785,6 @@ export default function GeneratePage() {
         toast.success(savedScriptId ? "Script updated!" : "Script saved!");
       });
       
-      setStep(0);
-      setResult(null);
-      setThumbnailImage(null);
-      setThumbnailUrl(null);
       setSaveError(null);
     } catch (saveScriptError: unknown) {
       setSaveError(saveScriptError instanceof Error ? saveScriptError.message : "Failed to save script");
