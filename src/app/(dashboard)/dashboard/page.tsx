@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useGenerationStore } from "@/store/generationStore";
 import {
@@ -387,7 +387,7 @@ function EmptyState() {
 }
 
 // ─── Main Dashboard Page ──────────────────────────────────
-export default function DashboardPage() {
+function DashboardContent() {
   const searchParams = useSearchParams();
   const projectFilter = searchParams.get("project");
   const [scripts, setScripts] = useState<ScriptCard[]>([]);
@@ -662,5 +662,17 @@ export default function DashboardPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function DashboardPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="w-8 h-8 animate-spin text-primary/40" />
+      </div>
+    }>
+      <DashboardContent />
+    </Suspense>
   );
 }
