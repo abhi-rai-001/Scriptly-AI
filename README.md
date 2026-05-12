@@ -88,7 +88,3 @@ For deep dives into the system, check out our docs:
 - [Data Flow & API](docs/DATA_FLOW.md)
 - [Security Measures](docs/SECURITY.md)
 - [Product Requirements (PRD)](docs/PRD.md)
-
----
-
-Developed by the Scriptly AI Team. Turn ideas into viral content in seconds.
