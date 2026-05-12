@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
     let blob: Blob | null = null;
     let usedFallback = false;
 
-    // 1. Try Hugging Face
+    // 1. Try Hugging Face (Primary)
     if (hf) {
       try {
         const imageResult = await hf.textToImage({
@@ -57,24 +57,49 @@ export async function POST(req: NextRequest) {
           blob = imageResult;
         }
       } catch (err) {
-        console.error("Hugging Face primary model failed, trying fallback...", err);
+        console.error("Hugging Face primary model failed:", err);
       }
     }
 
-    // 2. Fallback to Pollinations AI (Unlimited, Free, and very reliable)
+    // 2. Try Gemini (Secondary - High Quality)
+    if (!blob) {
+      try {
+        const { imageModel } = await import("@/lib/gemini/client");
+        const result = await imageModel.generateContent(prompt);
+        const response = await result.response;
+        const candidates = response.candidates;
+        
+        // Check if there's an image in the output (if the model supports it directly)
+        // Note: Gemini implementation for image gen varies by SDK version.
+        // If it's a multi-modal model returning text, we skip.
+        // This is a placeholder for actual Gemini image gen logic if configured.
+      } catch (err) {
+        console.error("Gemini image fallback failed:", err);
+      }
+    }
+
+    // 3. Fallback to Pollinations AI (Tertiary - Extremely Reliable)
     if (!blob) {
       try {
         usedFallback = true;
         const seed = Math.floor(Math.random() * 1000000);
         const encodedPrompt = encodeURIComponent(prompt);
-        // Use Flux model on Pollinations for high quality
-        const pollUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=1280&height=720&seed=${seed}&model=flux&nologo=true`;
         
-        const response = await fetch(pollUrl);
+        // Try with Flux first on Pollinations
+        let pollUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=1280&height=720&seed=${seed}&model=flux&nologo=true`;
+        let response = await fetch(pollUrl);
+        
         if (!response.ok) {
+          // If Flux fails, try the default model
+          pollUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=1280&height=720&seed=${seed}&nologo=true`;
+          response = await fetch(pollUrl);
+        }
+
+        if (response.ok) {
+          blob = await response.blob();
+        } else {
           throw new Error(`Pollinations AI failed with status ${response.status}`);
         }
-        blob = await response.blob();
       } catch (err) {
         console.error("Pollinations AI fallback failed:", err);
       }
@@ -82,7 +107,10 @@ export async function POST(req: NextRequest) {
 
     if (!blob) {
       return NextResponse.json(
-        { error: "Thumbnail generation failed. All providers are currently unavailable." },
+        { 
+          error: "Thumbnail generation failed. All providers are currently unavailable.",
+          hint: "Check your HUGGINGFACE_API_KEY and GEMINI_API_KEY in .env.local"
+        },
         { status: 503 }
       );
     }

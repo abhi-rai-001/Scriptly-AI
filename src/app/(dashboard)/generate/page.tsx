@@ -2,6 +2,7 @@
 
 import { useMemo, useState, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { jsPDF } from "jspdf";
 import { Document, HeadingLevel, Packer, Paragraph, TextRun } from "docx";
 import {
   AlertCircle,
@@ -437,6 +438,13 @@ export default function GeneratePage() {
     setSaveError(null);
   };
 
+  const handleExportJson = useCallback(() => {
+    if (!result) return;
+    const blob = new Blob([JSON.stringify(result, null, 2)], { type: "application/json" });
+    downloadBlob(blob, `${slugify(result.title)}.json`, "application/json");
+    setExportOpen(false);
+  }, [result]);
+
   const handleExportMarkdown = useCallback(() => {
     if (!result) return;
     downloadBlob(buildMarkdownExport(result, form), `${slugify(result.title)}.md`, "text/markdown;charset=utf-8");
@@ -446,49 +454,84 @@ export default function GeneratePage() {
   const handleExportPdf = useCallback(() => {
     if (!result) return;
 
-    const popup = window.open("", "_blank", "noopener,noreferrer");
-    if (!popup) {
-      downloadBlob(buildMarkdownExport(result, form), `${slugify(result.title)}.md`, "text/markdown;charset=utf-8");
-      setExportOpen(false);
-      return;
-    }
+    try {
+      const doc = new jsPDF();
+      let cursorY = 20;
+      const margin = 20;
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const maxLineWidth = pageWidth - margin * 2;
 
-    popup.document.write(`
-      <!doctype html>
-      <html>
-        <head>
-          <title>${escapeXml(result.title)}</title>
-          <meta charset="utf-8" />
-          <style>
-            body { font-family: Arial, sans-serif; padding: 40px; color: #111827; }
-            h1 { margin: 0 0 16px; }
-            p, li { line-height: 1.6; }
-            ul { padding-left: 20px; }
-          </style>
-        </head>
-        <body>
-          <h1>${escapeXml(result.title)}</h1>
-          <p><strong>Platform:</strong> ${escapeXml(PLATFORM_LABELS[form.platform])}</p>
-          <p><strong>Duration:</strong> ${escapeXml(form.duration)}</p>
-          <p><strong>Niche:</strong> ${escapeXml(form.niche)}</p>
-          <h2>Hook</h2>
-          <p>${escapeXml(result.hook)}</p>
-          <h2>Full Script</h2>
-          <p>${escapeXml(result.script)}</p>
-          <h2>CTA</h2>
-          <p>${escapeXml(result.cta)}</p>
-          <h2>Scene Directions</h2>
-          <ul>${result.sceneBreakdown.map((scene) => `<li>${escapeXml(`Scene ${scene.scene} (${scene.duration}) — ${scene.visual} | ${scene.audio}${scene.text_overlay ? ` | Text: ${scene.text_overlay}` : ""}`)}</li>`).join("")}</ul>
-          <h2>Hashtags</h2>
-          <p>${escapeXml(result.hashtags.join(" "))}</p>
-        </body>
-      </html>
-    `);
-    popup.document.close();
-    popup.focus();
-    popup.print();
-    setExportOpen(false);
-  }, [form, result]);
+      // Header
+      doc.setFontSize(22);
+      doc.setFont("helvetica", "bold");
+      doc.text(result.title, margin, cursorY);
+      cursorY += 15;
+
+      // Meta info
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(100);
+      doc.text(`Platform: ${PLATFORM_LABELS[form.platform]} | Duration: ${form.duration} | Niche: ${form.niche}`, margin, cursorY);
+      cursorY += 15;
+
+      // Sections
+      const addSection = (title: string, content: string) => {
+        if (cursorY > 260) {
+          doc.addPage();
+          cursorY = 20;
+        }
+        doc.setFontSize(14);
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(0);
+        doc.text(title, margin, cursorY);
+        cursorY += 8;
+
+        doc.setFontSize(11);
+        doc.setFont("helvetica", "normal");
+        const lines = doc.splitTextToSize(content, maxLineWidth);
+        doc.text(lines, margin, cursorY);
+        cursorY += lines.length * 6 + 10;
+      };
+
+      addSection("Hook", result.hook);
+      addSection("Full Script", result.script);
+      addSection("Call to Action", result.cta);
+
+      // Scene Breakdown
+      if (cursorY > 250) {
+        doc.addPage();
+        cursorY = 20;
+      }
+      doc.setFontSize(14);
+      doc.setFont("helvetica", "bold");
+      doc.text("Scene Breakdown", margin, cursorY);
+      cursorY += 8;
+
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "normal");
+      result.sceneBreakdown.forEach((scene) => {
+        const text = `Scene ${scene.scene} (${scene.duration}): ${scene.visual} | ${scene.audio}`;
+        const lines = doc.splitTextToSize(text, maxLineWidth);
+        if (cursorY + lines.length * 5 > 280) {
+          doc.addPage();
+          cursorY = 20;
+        }
+        doc.text(lines, margin, cursorY);
+        cursorY += lines.length * 5 + 3;
+      });
+
+      cursorY += 5;
+      addSection("Hashtags", result.hashtags.join(" "));
+
+      doc.save(`${slugify(result.title)}.pdf`);
+    } catch (err) {
+      console.error("PDF generation failed:", err);
+      // Fallback to markdown if jsPDF fails
+      downloadBlob(buildMarkdownExport(result, form), `${slugify(result.title)}.md`, "text/markdown;charset=utf-8");
+    } finally {
+      setExportOpen(false);
+    }
+  }, [form, result, slugify]);
 
   const handleExportDocx = useCallback(async () => {
     if (!result) return;
@@ -1119,6 +1162,10 @@ export default function GeneratePage() {
                 <Button variant="outline" onClick={handleExportDocx} className="justify-start border-white/10">
                   <Download className="w-3.5 h-3.5 mr-2" />
                   DOCX
+                </Button>
+                <Button variant="outline" onClick={handleExportJson} className="justify-start border-white/10">
+                  <Download className="w-3.5 h-3.5 mr-2" />
+                  JSON
                 </Button>
               </div>
               <DialogFooter>
