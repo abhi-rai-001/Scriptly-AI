@@ -117,13 +117,18 @@ Return ONLY a JSON array of strings: ["#Tag1", "#Tag2"]`;
 }
 
 export function buildThumbnailPrompt(
-  params: Pick<GenerateThumbnailInput, "title" | "hook" | "niche" | "platform">
+  params: Partial<Pick<GenerateThumbnailInput, "title" | "hook" | "niche" | "platform">>
 ): string {
-  return `Create a premium, high-converting ${params.platform === 'youtube_shorts' ? 'YouTube Shorts' : params.platform === 'instagram' ? 'Instagram Reel' : 'TikTok'} thumbnail.
+  const title = params.title || "Untitled Video";
+  const hook = params.hook || "No hook provided";
+  const niche = params.niche || "General Content";
+  const platform = params.platform || "instagram";
 
-Video title: ${params.title}
-Hook: ${params.hook}
-Niche: ${params.niche}
+  return `Create a premium, high-converting ${platform === 'youtube_shorts' ? 'YouTube Shorts' : platform === 'instagram' ? 'Instagram Reel' : 'TikTok'} thumbnail.
+
+Video title: ${title}
+Hook: ${hook}
+Niche: ${niche}
 
 Design direction:
 - Professional ad creative quality.

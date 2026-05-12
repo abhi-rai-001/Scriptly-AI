@@ -18,12 +18,12 @@ export type GenerateScriptInput = z.infer<typeof generateScriptSchema>;
 
 // --- Thumbnail Generation Inputs ---
 export const generateThumbnailSchema = z.object({
-  title: z.string().min(1, "Title is required"),
-  hook: z.string().min(1, "Hook is required"),
-  niche: z.string().min(1, "Niche is required"),
-  platform: z.enum(["instagram", "youtube_shorts", "tiktok"]),
+  title: z.string().optional(),
+  hook: z.string().optional(),
+  niche: z.string().optional(),
+  platform: z.enum(["instagram", "youtube_shorts", "tiktok"]).optional(),
   customPrompt: z.string().max(10000, "Custom prompt must be 10,000 characters or less").optional(),
-  previousStoragePath: z.string().max(500, "Previous thumbnail path is too long").optional(),
+  previousStoragePath: z.string().nullable().optional(),
 });
 
 export type GenerateThumbnailInput = z.infer<typeof generateThumbnailSchema>;
@@ -46,12 +46,12 @@ const sceneSchema = z.object({
 });
 
 export const saveScriptSchema = z.object({
-  project_id: z.string().uuid().nullable().optional(),
-  topic: z.string(),
-  niche: z.string(),
-  platform: z.string(),
-  content_style: z.string(),
-  duration: z.string(),
+  project_id: z.preprocess((val) => (val === "" ? null : val), z.string().uuid().nullable().optional()),
+  topic: z.string().min(1, "Topic is required"),
+  niche: z.string().min(1, "Niche is required"),
+  platform: z.string().min(1, "Platform is required"),
+  content_style: z.string().min(1, "Style is required"),
+  duration: z.string().min(1, "Duration is required"),
   title: z.string().optional(),
   hook: z.string().optional(),
   script: z.string().optional(),
@@ -59,10 +59,10 @@ export const saveScriptSchema = z.object({
   cta: z.string().optional(),
   hashtags: z.array(z.string()).optional(),
   thumbnail_base64: z.string().optional(),
-  thumbnail_url: z.string().url().optional(),
+  thumbnail_url: z.string().url().nullable().optional(),
   status: z.enum(["draft","ready","published"]).optional(),
-  viral_score: z.number().min(0).max(100).optional(),
-  viral_analysis: z.string().optional(),
+  viral_score: z.number().min(0).max(100).nullable().optional(),
+  viral_analysis: z.string().nullable().optional(),
 });
 
 export const updateScriptSchema = saveScriptSchema.partial();
