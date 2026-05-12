@@ -26,17 +26,33 @@
        │                               │
        ▼                               ▼
 ┌──────────────┐               ┌──────────────────────┐
-│  GEMINI API  │               │      SUPABASE         │
-│  (Google AI) │               │                      │
-│              │               │  PostgreSQL DB        │
-│  Text models │               │  Auth (JWT)           │
-│  Image gen   │               │  Storage (thumbnails) │
+│  AI SERVICES │               │      SUPABASE         │
+│              │               │                      │
+│  Gemini      │               │  PostgreSQL DB        │
+│  HuggingFace │               │  Auth (JWT)           │
+│  Pollinations│               │  Storage (thumbnails) │
 └──────────────┘               └──────────────────────┘
 ```
 
 ---
 
-## 2. Layer Responsibilities
+## 2. Key Strategies
+
+### Multi-Provider Thumbnail Engine
+To ensure 99.9% uptime for image generation, the system employs a tiered fallback strategy:
+1. **Hugging Face (Primary)**: Uses high-quality Stable Diffusion models.
+2. **Gemini (Secondary)**: Fallback to Google's multimodal models.
+3. **Pollinations AI (Tertiary)**: Rapid, public fallback for guaranteed generation.
+
+### Iterative Generation Lifecycle
+Unlike standard generators that reset on every run, Scriptly AI supports **Iterative Refining**:
+- Starting a generation preserves the `savedScriptId`.
+- Subsequent saves/updates perform a `PATCH` to the same record.
+- Users can refine topic/style without creating duplicate entries.
+
+---
+
+## 3. Layer Responsibilities
 
 ### Layer 1 — Client (React)
 **What it does:**
@@ -124,7 +140,7 @@ Row Level Security (RLS) enforced at DB level — users can only ever read/write
 
 ---
 
-## 3. Environment Variables
+## 4. Environment Variables
 
 ```env
 # Supabase
@@ -143,7 +159,7 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 
 ---
 
-## 4. Security Architecture
+## 5. Security Architecture
 
 | Threat | Mitigation |
 |---|---|
@@ -167,7 +183,7 @@ await db.insert({ user_id, ... })
 
 ---
 
-## 5. Scalability Considerations
+## 6. Scalability Considerations
 
 This is a v1 demo, but the architecture is designed to scale:
 
@@ -186,7 +202,7 @@ This is a v1 demo, but the architecture is designed to scale:
 
 ---
 
-## 6. Deployment Architecture
+## 7. Deployment Architecture
 
 ```
 GitHub Repo
@@ -207,7 +223,7 @@ Vercel (auto-deploy on push to main)
 
 ---
 
-## 7. Tech Decision Rationale
+## 8. Tech Decision Rationale
 
 | Decision | Why |
 |---|---|

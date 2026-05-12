@@ -1,7 +1,7 @@
 # Product Requirements Document
 ## AI Reel Script & Thumbnail Generator
-**Version:** 1.0  
-**Stack:** Next.js 14 · TypeScript · Tailwind CSS · Supabase · Gemini API  
+**Version:** 1.1  
+**Stack:** Next.js 16 · TypeScript · Tailwind CSS 4 · Supabase · Multi-AI (Gemini + HuggingFace)  
 **Assignment:** Scriptly AI — Option 3
 
 ---
@@ -78,8 +78,9 @@ Prompting is optimized for professional, ad-grade output quality with strong ret
 - Search by title or topic
 
 ### F7 — Export
-- Export individual script as **PDF** (formatted, print-ready)
+- Export individual script as **PDF** (formatted, client-side via jsPDF)
 - Export as **Markdown** file
+- Export as **JSON** (full raw data for developers)
 - Copy to clipboard (one-click)
 
 ### F8 — Landing Page / Homepage

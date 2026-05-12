@@ -163,6 +163,7 @@ path:   {user_id}/{script_id}.png
 ---
 
 ### `POST /api/generate/thumbnail`
+**Logic:** Multi-provider fallback (Hugging Face → Gemini → Pollinations).
 
 **Request:**
 ```json
@@ -189,6 +190,7 @@ path:   {user_id}/{script_id}.png
 **Request:**
 ```json
 {
+  "id": "uuid", // Optional: If provided, updates existing script
   "project_id": "uuid",
   "topic": "...",
   "niche": "tech",

@@ -7,12 +7,13 @@
 
 | Layer | Choice | Reason |
 |---|---|---|
-| Framework | Next.js 14 (App Router) | File-based routing, server components, API routes in one repo |
-| Language | TypeScript | Type safety on AI response shapes |
-| Styling | Tailwind CSS | Rapid UI, no context switching |
-| UI Components | shadcn/ui | Accessible, unstyled-by-default, easy to theme |
-| State Management | Zustand | Lightweight, no boilerplate, good for generation state |
-| Server State | TanStack Query (React Query) | Caching, refetch, loading states for DB data |
+| Framework | Next.js 16 (App Router) | Latest stable features, Turbopack, and enhanced server components |
+| Language | TypeScript | Full type safety across generation store and API contracts |
+| Styling | Tailwind CSS 4 | Modern utility-first styling with high-performance builds |
+| UI Components | shadcn/ui | Modern, accessible components integrated into the Obsidian Lux theme |
+| State Management | Zustand | Centralized store for iterative generation and thumbnail state |
+| Server State | TanStack Query | Optimized fetching for dashboard projects and script lists |
+| Exports | jsPDF + docx | Robust client-side generation for PDF and Word documents |
 | Forms | React Hook Form + Zod | Validation without pain |
 | Auth | Supabase Auth (client SDK) | Hooks-ready, works with SSR |
 | Animations | Framer Motion | Smooth transitions, streaming text feel |
