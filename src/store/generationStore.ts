@@ -39,6 +39,7 @@ interface GenerationState {
   thumbnailImage: string | null;
   thumbnailUrl: string | null;
   thumbnailStoragePath: string | null;
+  savedScriptId: string | null;
 
   // Actions
   setStep: (step: number) => void;
@@ -49,6 +50,7 @@ interface GenerationState {
   setThumbnailStoragePath: (path: string | null) => void;
   setIsGenerating: (isGenerating: boolean) => void;
   setError: (error: string | null) => void;
+  setSavedScriptId: (id: string | null) => void;
   resetAll: () => void;
 }
 
@@ -73,6 +75,7 @@ export const useGenerationStore = create<GenerationState>()(
       thumbnailImage: null,
       thumbnailUrl: null,
       thumbnailStoragePath: null,
+      savedScriptId: null,
 
       setStep: (step) => set({ step }),
       setForm: (form) =>
@@ -83,6 +86,7 @@ export const useGenerationStore = create<GenerationState>()(
       setThumbnailImage: (thumbnailImage) => set({ thumbnailImage }),
       setThumbnailUrl: (thumbnailUrl) => set({ thumbnailUrl }),
       setThumbnailStoragePath: (thumbnailStoragePath) => set({ thumbnailStoragePath }),
+      setSavedScriptId: (savedScriptId) => set({ savedScriptId }),
       setIsGenerating: (isGenerating) => set({ isGenerating }),
       setError: (error) => set({ error }),
       resetAll: () =>
@@ -95,6 +99,7 @@ export const useGenerationStore = create<GenerationState>()(
           thumbnailImage: null,
           thumbnailUrl: null,
           thumbnailStoragePath: null,
+          savedScriptId: null,
         }),
     }),
     {

@@ -382,10 +382,11 @@ export default function GeneratePage() {
     resetAll,
     thumbnailImage,
     thumbnailUrl,
+    savedScriptId,
+    setSavedScriptId,
   } = useGenerationStore();
 
   const [exportOpen, setExportOpen] = useState(false);
-  const [savedScriptId, setSavedScriptId] = useState<string | null>(null);
   const [isSavingScript, setIsSavingScript] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [projects, setProjects] = useState<{ id: string; name: string }[]>([]);

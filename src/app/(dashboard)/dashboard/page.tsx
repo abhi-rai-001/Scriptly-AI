@@ -27,6 +27,9 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 
@@ -186,12 +189,16 @@ function ScriptCardComponent({
   script, 
   handleDuplicate,
   handleDelete,
+  handleMoveToProject,
   isActionLoading,
+  projects,
 }: { 
   script: ScriptCard; 
   handleDuplicate: (id: string) => void;
   handleDelete: (id: string) => void;
+  handleMoveToProject: (scriptId: string, projectId: string | null) => void;
   isActionLoading: string | null;
+  projects: ProjectRow[];
 }) {
   const router = useRouter();
   const platform = PLATFORM_CONFIG[script.platform];
@@ -258,16 +265,50 @@ function ScriptCardComponent({
               </div>
             )}
           </div>
-          <DropdownMenu>
+           <DropdownMenu>
             <DropdownMenuTrigger render={
-              <Button variant="ghost" size="icon" className="w-7 h-7 flex-shrink-0 text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity rounded-lg">
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={(e) => e.stopPropagation()}
+                className="w-7 h-7 flex-shrink-0 text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity rounded-lg"
+              >
                 <MoreHorizontal className="w-3.5 h-3.5" />
               </Button>
             } />
-            <DropdownMenuContent align="end" className="w-40 bg-card border-white/10">
+            <DropdownMenuContent align="end" className="w-48 bg-card border-white/10">
               <DropdownMenuItem className="text-sm cursor-pointer" onClick={(e) => { e.stopPropagation(); router.push(`/script/${script.id}`); }}>
                 <ExternalLink className="w-3.5 h-3.5 mr-2" /> View Script
               </DropdownMenuItem>
+
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger className="text-sm cursor-pointer" onClick={(e) => e.stopPropagation()}>
+                  <FolderOpen className="w-3.5 h-3.5 mr-2" /> Move to Project
+                </DropdownMenuSubTrigger>
+                <DropdownMenuSubContent className="bg-card border-white/10 w-48">
+                  <DropdownMenuItem 
+                    className="text-sm cursor-pointer" 
+                    onClick={(e) => { e.stopPropagation(); handleMoveToProject(script.id, null); }}
+                    disabled={!script.projectId}
+                  >
+                    No Project (General)
+                  </DropdownMenuItem>
+                  {projects.length > 0 && <DropdownMenuSeparator className="bg-white/8" />}
+                  {projects.map((p) => (
+                    <DropdownMenuItem 
+                      key={p.id}
+                      className="text-sm cursor-pointer"
+                      onClick={(e) => { e.stopPropagation(); handleMoveToProject(script.id, p.id); }}
+                      disabled={script.projectId === p.id}
+                    >
+                      {p.name}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuSubContent>
+              </DropdownMenuSub>
+
+              <DropdownMenuSeparator className="bg-white/8" />
+              
               <DropdownMenuItem 
                 className="text-sm cursor-pointer" 
                 onClick={(e) => { e.stopPropagation(); handleDuplicate(script.id); }}
@@ -276,7 +317,7 @@ function ScriptCardComponent({
                 {isActionLoading === script.id ? <Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" /> : <Copy className="w-3.5 h-3.5 mr-2" />}
                 Duplicate
               </DropdownMenuItem>
-              <DropdownMenuSeparator className="bg-white/8" />
+
               <DropdownMenuItem 
                 className="text-sm text-destructive cursor-pointer focus:text-destructive" 
                 onClick={(e) => { e.stopPropagation(); handleDelete(script.id); }}
@@ -356,6 +397,7 @@ export default function DashboardPage() {
   const [platform, setPlatform] = useState<Platform | "all">("all");
   const [statusFilter, setStatusFilter] = useState<keyof typeof STATUS_CONFIG | "all">("all");
   const [isActionLoading, setIsActionLoading] = useState<string | null>(null);
+  const [projects, setProjects] = useState<ProjectRow[]>([]);
 
   const loadDashboardData = useCallback(async () => {
     try {
@@ -368,8 +410,9 @@ export default function DashboardPage() {
       const scriptsData = await scriptsResponse.json().catch(() => null);
       const projectsData = await projectsResponse.json().catch(() => null);
 
-      const rows = (scriptsData?.scripts || []) as ScriptRow[];
+       const rows = (scriptsData?.scripts || []) as ScriptRow[];
       const pData = (projectsData || []) as ProjectRow[];
+      setProjects(pData);
       const projectMap = new Map(pData.map(p => [p.id, p.name]));
 
       const mappedScripts: ScriptCard[] = rows.map((script) => ({
@@ -411,6 +454,24 @@ export default function DashboardPage() {
     } catch (err) {
       console.error(err);
       alert("Failed to duplicate script");
+    } finally {
+      setIsActionLoading(null);
+    }
+  };
+
+  const handleMoveToProject = async (scriptId: string, projectId: string | null) => {
+    setIsActionLoading(scriptId);
+    try {
+      const res = await fetch(`/api/scripts/${scriptId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ project_id: projectId }),
+      });
+      if (!res.ok) throw new Error("Failed to move script");
+      await loadDashboardData();
+    } catch (err) {
+      console.error(err);
+      alert("Failed to move script");
     } finally {
       setIsActionLoading(null);
     }
@@ -590,8 +651,10 @@ export default function DashboardPage() {
               <ScriptCardComponent 
                 key={script.id} 
                 script={script} 
+                projects={projects}
                 handleDuplicate={handleDuplicate}
                 handleDelete={handleDelete}
+                handleMoveToProject={handleMoveToProject}
                 isActionLoading={isActionLoading}
               />
             ))
