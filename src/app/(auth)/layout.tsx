@@ -96,6 +96,7 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
               width={40}
               height={40}
               className="rounded-full border border-white/10"
+              unoptimized
             />
             <div>
               <p className="font-semibold text-sm text-foreground">{testimonial.name}</p>

@@ -85,6 +85,7 @@ For deep dives into the system, check out our docs:
 - [Architecture Overview](docs/ARCHITECTURE.md)
 - [Frontend Design System](docs/FRONTEND.md)
 - [Data Flow & API](docs/DATA_FLOW.md)
+- [Security Measures](docs/SECURITY.md)
 - [Product Requirements (PRD)](docs/PRD.md)
 
 ---

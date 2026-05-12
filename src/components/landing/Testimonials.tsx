@@ -91,6 +91,7 @@ function TestimonialCard({ t }: { t: typeof testimonials[0] }) {
           width={36}
           height={36}
           className="rounded-full border border-white/10"
+          unoptimized
         />
         <div>
           <p className="text-sm font-semibold text-foreground">{t.name}</p>

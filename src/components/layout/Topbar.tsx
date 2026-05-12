@@ -1,7 +1,6 @@
 "use client";
 
 import { Search, Plus, Menu, ChevronRight } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -9,6 +8,17 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Sidebar } from "./Sidebar";
 import { usePathname, useRouter } from "next/navigation";
 import { useGenerationStore } from "@/store/generationStore";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { LogOut, User, Settings as SettingsIcon } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
 
 const breadcrumbLabels: Record<string, string> = {
   "/dashboard": "Dashboard",
@@ -29,6 +39,12 @@ export function Topbar() {
     router.push("/generate");
   };
 
+  const handleLogout = async () => {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    router.push("/login");
+  };
+
   const getPageLabel = () => {
     for (const [prefix, label] of Object.entries(breadcrumbLabels)) {
       if (pathname === prefix || pathname.startsWith(prefix + "/")) return label;
@@ -47,10 +63,10 @@ export function Topbar() {
         <div className="md:hidden">
           <Sheet>
             <SheetTrigger render={
-              <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground hover:bg-white/5 rounded-xl" />
-            }>
-              <Menu className="w-5 h-5" />
-            </SheetTrigger>
+              <button type="button" className="flex items-center justify-center w-10 h-10 text-muted-foreground hover:text-foreground hover:bg-white/5 rounded-xl transition-colors outline-none">
+                <Menu className="w-5 h-5" />
+              </button>
+            } />
             <SheetContent side="left" className="p-0 w-72 border-r border-white/8 bg-background">
               <Sidebar />
             </SheetContent>
@@ -97,11 +113,43 @@ export function Topbar() {
           <span className="sm:hidden">New</span>
         </button>
 
-        {/* Avatar */}
-        <Avatar className="w-9 h-9 border border-white/10 cursor-pointer hover:ring-2 hover:ring-[oklch(0.62_0.24_285_/_30%)] transition-all duration-200 rounded-xl">
-          <AvatarImage src="https://api.dicebear.com/7.x/notionists/svg?seed=Alex&backgroundColor=8b5cf6" alt="User" />
-          <AvatarFallback className="bg-[oklch(0.62_0.24_285_/_15%)] text-[oklch(0.72_0.20_285)] text-xs font-bold rounded-xl">AM</AvatarFallback>
-        </Avatar>
+
+        {/* User Profile Dropdown */}
+        <DropdownMenu>
+          <DropdownMenuTrigger render={
+            <button type="button" className="rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-[oklch(0.62_0.24_285_/_40%)]">
+              <Avatar className="w-9 h-9 border border-white/10 cursor-pointer hover:ring-2 hover:ring-[oklch(0.62_0.24_285_/_30%)] transition-all duration-200 rounded-xl">
+                <AvatarImage src="https://api.dicebear.com/7.x/notionists/svg?seed=Alex&backgroundColor=8b5cf6" alt="User" />
+                <AvatarFallback className="bg-[oklch(0.62_0.24_285_/_15%)] text-[oklch(0.72_0.20_285)] text-xs font-bold rounded-xl">AM</AvatarFallback>
+              </Avatar>
+            </button>
+          } />
+          <DropdownMenuContent align="end" className="w-56 bg-[oklch(0.13_0.006_285)] border-white/10 text-foreground rounded-2xl p-2 mt-1">
+            <DropdownMenuGroup>
+              <DropdownMenuLabel className="font-bold text-sm px-3 py-2">My Account</DropdownMenuLabel>
+            </DropdownMenuGroup>
+            <DropdownMenuSeparator className="bg-white/5 mx-1" />
+            <DropdownMenuItem className="flex items-center gap-2 px-3 py-2 rounded-xl focus:bg-white/5 cursor-pointer">
+              <User className="w-4 h-4 text-muted-foreground" />
+              <span>Profile</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem 
+              onClick={() => router.push("/settings")}
+              className="flex items-center gap-2 px-3 py-2 rounded-xl focus:bg-white/5 cursor-pointer"
+            >
+              <SettingsIcon className="w-4 h-4 text-muted-foreground" />
+              <span>Settings</span>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator className="bg-white/5 mx-1" />
+            <DropdownMenuItem 
+              onClick={handleLogout}
+              className="flex items-center gap-2 px-3 py-2 rounded-xl focus:bg-red-400/10 text-red-400 cursor-pointer transition-colors"
+            >
+              <LogOut className="w-4 h-4" />
+              <span className="font-semibold">Logout</span>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </header>
   );

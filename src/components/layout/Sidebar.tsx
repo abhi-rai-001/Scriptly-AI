@@ -12,9 +12,12 @@ import {
   Sparkles,
   CreditCard,
   ChevronRight,
+  LogOut,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useUsageStore } from "@/store/usageStore";
+import { createClient } from "@/lib/supabase/client";
+import { useRouter } from "next/navigation";
 
 const navItems = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -41,6 +44,13 @@ export function Sidebar() {
   const [projects, setProjects] = useState<SidebarProject[]>([]);
   const [loadingProjects, setLoadingProjects] = useState(true);
   const { scripts_count, thumbnails_count, scripts_limit, thumbnails_limit, fetchUsage } = useUsageStore();
+  const router = useRouter();
+  const supabase = createClient();
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    router.push("/login");
+  };
 
   const fetchRecentProjects = useCallback(async () => {
     try {
@@ -211,6 +221,16 @@ export function Sidebar() {
             </Button>
           </div>
         </div>
+
+        <button
+          onClick={handleLogout}
+          className="w-full mt-3 flex items-center gap-3 px-3 py-2 rounded-xl text-sm text-muted-foreground hover:bg-white/4 hover:text-red-400 transition-all duration-200 group"
+        >
+          <div className="w-8 h-8 rounded-lg bg-white/4 flex items-center justify-center flex-shrink-0 group-hover:bg-red-400/10">
+            <LogOut className="w-3.5 h-3.5 group-hover:text-red-400" />
+          </div>
+          <span className="font-medium">Logout</span>
+        </button>
       </div>
     </div>
   );

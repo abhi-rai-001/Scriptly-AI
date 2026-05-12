@@ -194,6 +194,7 @@ export default function Hero({ isAuthenticated }: HeroProps) {
                       width={28}
                       height={28}
                       className="w-full h-full"
+                      unoptimized
                     />
                   </div>
                 ))}
