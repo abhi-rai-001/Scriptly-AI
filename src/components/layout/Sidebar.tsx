@@ -14,10 +14,10 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useUsageStore } from "@/store/usageStore";
 
 const navItems = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-  { name: "My Scripts", href: "/scripts", icon: FileVideo },
   { name: "Projects", href: "/projects", icon: FolderOpen },
   { name: "Settings", href: "/settings", icon: Settings },
 ];
@@ -40,6 +40,7 @@ export function Sidebar() {
   const pathname = usePathname();
   const [projects, setProjects] = useState<SidebarProject[]>([]);
   const [loadingProjects, setLoadingProjects] = useState(true);
+  const { scripts_count, thumbnails_count, scripts_limit, thumbnails_limit, fetchUsage } = useUsageStore();
 
   const fetchRecentProjects = useCallback(async () => {
     try {
@@ -64,8 +65,9 @@ export function Sidebar() {
     // Avoid synchronous state updates in effect to prevent cascading renders
     Promise.resolve().then(() => {
       fetchRecentProjects();
+      fetchUsage();
     });
-  }, [fetchRecentProjects]);
+  }, [fetchRecentProjects, fetchUsage]);
 
   return (
     <div className="flex flex-col h-full border-r border-white/5" style={{ background: "oklch(0.14 0.007 285)" }}>
@@ -167,19 +169,36 @@ export function Sidebar() {
               <Sparkles className="w-3.5 h-3.5 text-[oklch(0.72_0.20_285)]" />
               <span className="text-sm font-bold text-foreground">Pro Plan</span>
             </div>
-            <p className="text-xs text-muted-foreground mb-3">
-              12 / 100 scripts used this month.
-            </p>
+            <div className="space-y-1 mb-3">
+              <p className="text-[10px] text-muted-foreground flex justify-between">
+                <span>Scripts</span>
+                <span className="text-foreground font-medium">{scripts_count} / {scripts_limit}</span>
+              </p>
+              <div className="w-full h-1 bg-white/8 rounded-full overflow-hidden">
+                <div
+                  className="h-full rounded-full transition-all duration-500"
+                  style={{
+                    width: `${Math.min((scripts_count / scripts_limit) * 100, 100)}%`,
+                    background: "linear-gradient(90deg, oklch(0.62 0.24 285), oklch(0.72 0.20 285))",
+                  }}
+                />
+              </div>
+            </div>
 
-            {/* Progress bar */}
-            <div className="w-full h-1 bg-white/8 rounded-full overflow-hidden mb-3">
-              <div
-                className="h-full rounded-full"
-                style={{
-                  width: "12%",
-                  background: "linear-gradient(90deg, oklch(0.62 0.24 285), oklch(0.72 0.20 285))",
-                }}
-              />
+            <div className="space-y-1 mb-4">
+              <p className="text-[10px] text-muted-foreground flex justify-between">
+                <span>Thumbnails</span>
+                <span className="text-foreground font-medium">{thumbnails_count} / {thumbnails_limit}</span>
+              </p>
+              <div className="w-full h-1 bg-white/8 rounded-full overflow-hidden">
+                <div
+                  className="h-full rounded-full transition-all duration-500"
+                  style={{
+                    width: `${Math.min((thumbnails_count / thumbnails_limit) * 100, 100)}%`,
+                    background: "linear-gradient(90deg, oklch(0.72 0.16 160), oklch(0.80 0.18 85))",
+                  }}
+                />
+              </div>
             </div>
 
             <Button

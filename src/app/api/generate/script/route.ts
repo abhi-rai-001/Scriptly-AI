@@ -131,6 +131,9 @@ export async function POST(req: NextRequest) {
           const parsed4 = hashtagsSchema.parse(parsed4Data);
           sendChunk("hashtags", parsed4);
 
+          // Update usage count
+          await supabase.rpc("increment_script_count", { user_uuid: user.id });
+
           controller.close();
         } catch (err: unknown) {
           sendChunk("error", { message: getErrorMessage(err) });

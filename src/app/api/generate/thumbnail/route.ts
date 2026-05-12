@@ -163,6 +163,9 @@ export async function POST(req: NextRequest) {
       .from(bucket)
       .getPublicUrl(fileName);
 
+    // Update usage count
+    await supabase.rpc("increment_thumbnail_count", { user_uuid: user.id });
+
     return NextResponse.json({
       imageBase64: `data:${mimeType};base64,${base64Data}`,
       imageUrl: publicUrl,
