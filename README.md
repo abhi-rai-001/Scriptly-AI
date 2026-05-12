@@ -14,7 +14,8 @@ Scriptly AI is a professional, studio-grade SaaS platform designed for high-perf
 
 ### 🖼️ AI Thumbnail Studio
 - **Social-Ready Visuals**: Generate eye-catching thumbnails optimized for the "scroll-stop" effect.
-- **Iterative Refinement**: Regenerate thumbnails with custom prompts until you find the perfect match.
+- **Model Flexibility**: Architected to easily swap between any image generation models (FLUX, Midjourney, DALL-E) to maintain high performance.
+- **Free Generous Credits**: Currently integrated with **Hugging Face Inference API** to provide creators with a high volume of free, high-fidelity generations.
 - **Save as Preview**: Instantly set any generated thumbnail as the primary preview for your script.
 
 ### 📊 Usage Tracking & Analytics
@@ -38,7 +39,7 @@ Scriptly AI is a professional, studio-grade SaaS platform designed for high-perf
 - **Database & Auth**: Supabase (PostgreSQL, Storage, Auth)
 - **AI Models**: 
   - **Gemini 2.5 Flash**: Script generation and strategy analysis.
-  - **FLUX.1-schnell (via Hugging Face)**: High-fidelity image generation.
+  - **FLUX.1-schnell (via Hugging Face)**: High-fidelity image generation with zero-cost credits.
   - **Pollinations AI**: Resilient fallback for image generation.
 - **Components**: Base UI + custom Shadcn/ui implementation.
 
