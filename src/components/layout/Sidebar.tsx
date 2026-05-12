@@ -1,5 +1,6 @@
 "use client";
 
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
@@ -21,14 +22,47 @@ const navItems = [
   { name: "Settings", href: "/settings", icon: Settings },
 ];
 
-const recentProjects = [
-  { name: "Tech Reviews", color: "bg-[oklch(0.62_0.24_285)]" },
-  { name: "Fitness Vlogs", color: "bg-[oklch(0.72_0.16_160)]" },
-  { name: "Finance Shorts", color: "bg-[oklch(0.80_0.18_85)]" },
+const PROJECT_COLORS = [
+  "bg-[oklch(0.62_0.24_285)]",
+  "bg-[oklch(0.72_0.16_160)]",
+  "bg-[oklch(0.80_0.18_85)]",
+  "bg-[oklch(0.68_0.20_220)]",
+  "bg-[oklch(0.65_0.22_340)]",
 ];
+
+interface SidebarProject {
+  id: string;
+  name: string;
+  color: string;
+}
 
 export function Sidebar() {
   const pathname = usePathname();
+  const [projects, setProjects] = useState<SidebarProject[]>([]);
+  const [loadingProjects, setLoadingProjects] = useState(true);
+
+  const fetchRecentProjects = useCallback(async () => {
+    try {
+      const res = await fetch("/api/projects");
+      if (!res.ok) return;
+      const data = await res.json();
+      
+      const mapped = (data || []).slice(0, 5).map((p: any, i: number) => ({
+        id: p.id,
+        name: p.name,
+        color: PROJECT_COLORS[i % PROJECT_COLORS.length]
+      }));
+      setProjects(mapped);
+    } catch (err) {
+      console.error("Failed to fetch sidebar projects:", err);
+    } finally {
+      setLoadingProjects(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchRecentProjects();
+  }, [fetchRecentProjects]);
 
   return (
     <div className="flex flex-col h-full border-r border-white/5" style={{ background: "oklch(0.14 0.007 285)" }}>
@@ -90,21 +124,30 @@ export function Sidebar() {
             <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground/50">
               Recent Projects
             </p>
-            <Link href="/projects" className="text-[10px] font-semibold text-[oklch(0.62_0.24_285)] hover:text-[oklch(0.72_0.20_285)] transition-colors">
+            <Link href="/dashboard" className="text-[10px] font-semibold text-[oklch(0.62_0.24_285)] hover:text-[oklch(0.72_0.20_285)] transition-colors">
               All
             </Link>
           </div>
           <nav className="space-y-0.5">
-            {recentProjects.map((project) => (
-              <Link
-                key={project.name}
-                href={`/projects/${project.name.toLowerCase().replace(" ", "-")}`}
-                className="flex items-center gap-3 px-3 py-2 rounded-xl text-sm text-muted-foreground hover:bg-white/4 hover:text-foreground transition-all duration-200 group"
-              >
-                <div className={cn("w-2 h-2 rounded-full flex-shrink-0", project.color)} />
-                <span className="truncate">{project.name}</span>
-              </Link>
-            ))}
+            {loadingProjects ? (
+              <div className="px-3 py-2 space-y-2">
+                <div className="h-4 bg-white/5 rounded animate-pulse" />
+                <div className="h-4 bg-white/5 rounded animate-pulse w-2/3" />
+              </div>
+            ) : projects.length === 0 ? (
+              <p className="px-3 py-2 text-[10px] text-muted-foreground italic">No projects yet</p>
+            ) : (
+              projects.map((project) => (
+                <Link
+                  key={project.id}
+                  href={`/dashboard?project=${project.id}`}
+                  className="flex items-center gap-3 px-3 py-2 rounded-xl text-sm text-muted-foreground hover:bg-white/4 hover:text-foreground transition-all duration-200 group"
+                >
+                  <div className={cn("w-2 h-2 rounded-full flex-shrink-0", project.color)} />
+                  <span className="truncate">{project.name}</span>
+                </Link>
+              ))
+            )}
           </nav>
         </div>
       </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useGenerationStore } from "@/store/generationStore";
 import {
   FileVideo,
@@ -347,6 +347,8 @@ function EmptyState() {
 
 // ─── Main Dashboard Page ──────────────────────────────────
 export default function DashboardPage() {
+  const searchParams = useSearchParams();
+  const projectFilter = searchParams.get("project");
   const [scripts, setScripts] = useState<ScriptCard[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -481,9 +483,10 @@ export default function DashboardPage() {
         const matchSearch = s.title.toLowerCase().includes(search.toLowerCase()) || s.niche.toLowerCase().includes(search.toLowerCase());
         const matchPlatform = platform === "all" || s.platform === platform;
         const matchStatus = statusFilter === "all" || s.status === statusFilter;
-        return matchSearch && matchPlatform && matchStatus;
+        const matchProject = !projectFilter || s.projectId === projectFilter;
+        return matchSearch && matchPlatform && matchStatus && matchProject;
       }),
-    [platform, scripts, search, statusFilter]
+    [platform, scripts, search, statusFilter, projectFilter]
   );
 
   return (
