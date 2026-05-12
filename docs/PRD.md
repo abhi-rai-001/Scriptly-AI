@@ -91,6 +91,16 @@ Prompting is optimized for professional, ad-grade output quality with strong ret
 - **Pricing:** Tiered pricing display (even if non-functional for v1)
 - **Footer:** Links, legal, and branding
 
+### F9 — Usage Tracking & Quota Management
+- Monitor script and thumbnail generation counts in real-time.
+- Monthly resets and proactive quota warnings integrated into the Sidebar.
+- Atomic server-side increments using PostgreSQL RPCs for precision.
+
+### F10 — Personalized Dashboard
+- Dynamic time-aware greetings ("Good morning", "Good afternoon", "Good evening").
+- User-specific metadata integration (Full Name, Profile Avatar).
+- Contextual dashboard status summaries.
+
 ---
 
 ## 3. User Flows
@@ -132,7 +142,6 @@ Login → Dashboard → Browse saved scripts → Open script → Edit / Duplicat
 - Scheduling or publishing to platforms
 - Team collaboration
 - Payments / subscription billing
-- Analytics / performance tracking
 
 ---
 
@@ -142,3 +151,4 @@ Login → Dashboard → Browse saved scripts → Open script → Edit / Duplicat
 - Saved scripts persist across sessions
 - Dashboard renders correctly with 10+ scripts
 - Export produces a correctly formatted PDF
+- Analytics dashboard tracks usage trends accurately

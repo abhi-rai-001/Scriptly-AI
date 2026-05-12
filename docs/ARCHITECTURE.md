@@ -157,8 +157,6 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 
 `GEMINI_API_KEY` and `SUPABASE_SERVICE_ROLE_KEY` are server-only. Never prefixed with `NEXT_PUBLIC_`.
 
----
-
 ## 5. Security Architecture
 
 | Threat | Mitigation |
@@ -168,6 +166,7 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 | Unauthenticated API calls | Every API route checks `supabase.auth.getUser()` |
 | Prompt injection via user input | Inputs sanitized before injected into prompt templates |
 | Cross-user data access | user_id from server-side session, never from request body |
+| react-hooks/set-state-in-effect | Handled by wrapping async calls in useEffect with mounting guards |
 
 **Never trust the client for identity.** The user_id used in DB writes always comes from the server-side Supabase session, not from the request body.
 
@@ -183,7 +182,16 @@ await db.insert({ user_id, ... })
 
 ---
 
-## 6. Scalability Considerations
+## 6. State Management (Zustand)
+
+The application uses **Zustand** for lightweight, transient state management:
+
+- **useGenerationStore**: Manages the multi-step generation lifecycle, preserving data across steps and handling partial state updates.
+- **useUsageStore**: Synchronizes real-time consumption data (scripts/thumbnails) across the dashboard and sidebar to update progress bars and enforce usage quotas.
+
+---
+
+## 7. Scalability Considerations
 
 This is a v1 demo, but the architecture is designed to scale:
 
@@ -202,7 +210,7 @@ This is a v1 demo, but the architecture is designed to scale:
 
 ---
 
-## 7. Deployment Architecture
+## 8. Deployment Architecture
 
 ```
 GitHub Repo

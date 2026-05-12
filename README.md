@@ -17,7 +17,15 @@ Scriptly AI is a professional, studio-grade SaaS platform designed for high-perf
 - **Iterative Refinement**: Regenerate thumbnails with custom prompts until you find the perfect match.
 - **Save as Preview**: Instantly set any generated thumbnail as the primary preview for your script.
 
-### 📂 Pro Management & Export
+### 📊 Usage Tracking & Analytics
+- **Real-Time Monitoring**: Keep track of script and thumbnail generation usage via dynamic progress bars.
+- **Quota Management**: Pro-active status updates for monthly limits directly in the sidebar.
+
+### ✨ Personalized Experience
+- **Smart Greetings**: Time-aware greetings based on your local timezone.
+- **User Dashboard**: High-level overview of recent work with personalized user metadata.
+
+### Pro Management & Export
 - **Project Hierarchy**: Organize your content into folders/projects for different clients or niches.
 - **Multi-Format Export**: Download your scripts as **PDF**, **Markdown**, **JSON**, or **DOCX**.
 - **Auto-Saving Drafts**: Never lose work with persistent draft states and debounced auto-saves.

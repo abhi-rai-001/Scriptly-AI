@@ -26,6 +26,28 @@ Auto-populated via Supabase Auth trigger on user signup.
 
 ---
 
+### Table: `user_usage`
+Tracks script and thumbnail generation usage per user.
+
+```sql
+CREATE TABLE user_usage (
+  user_id           UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  scripts_count     INTEGER DEFAULT 0,
+  thumbnails_count  INTEGER DEFAULT 0,
+  last_reset_at     TIMESTAMPTZ DEFAULT now(),
+  created_at        TIMESTAMPTZ DEFAULT now(),
+  updated_at        TIMESTAMPTZ DEFAULT now()
+);
+```
+
+### RPC Functions (Supabase)
+Used for atomic increments of usage counts.
+
+- `increment_script_count(user_id uuid)`
+- `increment_thumbnail_count(user_id uuid)`
+
+---
+
 ### Table: `projects`
 ```sql
 CREATE TABLE projects (
