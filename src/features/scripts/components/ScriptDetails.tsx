@@ -305,6 +305,7 @@ function SectionBlock({
   content,
   isArray,
   onChange,
+  onRefine,
 }: {
   label: string;
   emoji: string;
@@ -350,7 +351,7 @@ function SectionBlock({
             } />
             <DropdownMenuContent align="end" className="bg-card border-white/10 w-48">
               <div className="px-3 py-2 text-[10px] font-black uppercase tracking-widest text-muted-foreground">AI Refinement</div>
-              <DropdownMenuItem 
+              <DropdownMenuItem
                 className="text-xs cursor-pointer gap-2"
                 onClick={async () => {
                   if (!onRefine || isArray) return;
@@ -363,7 +364,7 @@ function SectionBlock({
                 <Zap className="w-3 h-3 text-yellow-400" />
                 Make it Punchy
               </DropdownMenuItem>
-              <DropdownMenuItem 
+              <DropdownMenuItem
                 className="text-xs cursor-pointer gap-2"
                 onClick={async () => {
                   if (!onRefine || isArray) return;
@@ -376,7 +377,7 @@ function SectionBlock({
                 <Clock className="w-3 h-3 text-blue-400" />
                 Shorten Section
               </DropdownMenuItem>
-              <DropdownMenuItem 
+              <DropdownMenuItem
                 className="text-xs cursor-pointer gap-2"
                 onClick={async () => {
                   if (!onRefine || isArray) return;
@@ -423,7 +424,7 @@ function SectionBlock({
                   </button>
                 } />
                 <DropdownMenuContent align="end" className="bg-card border-white/10 w-40">
-                  <DropdownMenuItem 
+                  <DropdownMenuItem
                     className="text-[10px] cursor-pointer"
                     onClick={async () => {
                       if (!onRefine) return;
@@ -786,7 +787,7 @@ export default function ScriptDetails({ scriptId }: { scriptId: string }) {
     ...script.mainScript,
     script.cta
   ].join(" ").trim().split(/\s+/).length;
-  
+
   const totalDurationSeconds = Math.round((totalWords / 145) * 60);
 
   return (
@@ -812,8 +813,8 @@ export default function ScriptDetails({ scriptId }: { scriptId: string }) {
             onClick={() => setViewMode('story')}
             className={cn(
               "flex items-center gap-2 px-6 py-2 rounded-xl text-xs font-bold transition-all duration-300",
-              viewMode === 'story' 
-                ? "bg-white/10 text-foreground shadow-[0_0_20px_rgba(255,255,255,0.05)] scale-[1.02]" 
+              viewMode === 'story'
+                ? "bg-white/10 text-foreground shadow-[0_0_20px_rgba(255,255,255,0.05)] scale-[1.02]"
                 : "text-muted-foreground hover:text-foreground hover:bg-white/[0.02]"
             )}
           >
@@ -824,8 +825,8 @@ export default function ScriptDetails({ scriptId }: { scriptId: string }) {
             onClick={() => setViewMode('pro')}
             className={cn(
               "flex items-center gap-2 px-6 py-2 rounded-xl text-xs font-bold transition-all duration-300",
-              viewMode === 'pro' 
-                ? "bg-white/10 text-foreground shadow-[0_0_20px_rgba(255,255,255,0.05)] scale-[1.02]" 
+              viewMode === 'pro'
+                ? "bg-white/10 text-foreground shadow-[0_0_20px_rgba(255,255,255,0.05)] scale-[1.02]"
                 : "text-muted-foreground hover:text-foreground hover:bg-white/[0.02]"
             )}
           >
@@ -838,26 +839,26 @@ export default function ScriptDetails({ scriptId }: { scriptId: string }) {
         <div className="flex items-center gap-6 justify-end w-auto">
           {/* Status & Timing Metrics */}
           <div className="flex items-center gap-4 px-4 py-1.5 bg-white/5 border border-white/10 rounded-2xl">
-             <div className="flex items-center gap-2 pr-4 border-r border-white/10" title={script.generation_time_ms ? "Generation Speed" : "Estimated Duration"}>
-                <Zap className="w-3.5 h-3.5 text-amber-400" />
-                <span className="text-[11px] font-black tracking-wider text-foreground">
-                  {script.generation_time_ms 
-                    ? `${(script.generation_time_ms / 1000).toFixed(1)}s`
-                    : formatDuration(totalDurationSeconds)
-                  }
-                </span>
-             </div>
-             <div className={cn(
-                "flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.1em] transition-all",
-                saveState === "saved" ? "text-[oklch(0.72_0.16_160)]" : saveState === "saving" ? "text-amber-400" : "text-muted-foreground"
-              )}>
-                {saveState === "saving" ? (
-                  <Loader2 className="w-3 h-3 animate-spin" />
-                ) : (
-                  <div className={cn("w-1.5 h-1.5 rounded-full", saveState === "saved" ? "bg-[oklch(0.72_0.16_160)] shadow-[0_0_8px_oklch(0.72_0.16_160)]" : "bg-muted-foreground")} />
-                )}
-                {saveState === "saved" ? "Saved" : saveState === "saving" ? "Syncing" : "Unsaved"}
-             </div>
+            <div className="flex items-center gap-2 pr-4 border-r border-white/10" title={script.generation_time_ms ? "Generation Speed" : "Estimated Duration"}>
+              <Zap className="w-3.5 h-3.5 text-amber-400" />
+              <span className="text-[11px] font-black tracking-wider text-foreground">
+                {script.generation_time_ms
+                  ? `${(script.generation_time_ms / 1000).toFixed(1)}s`
+                  : formatDuration(totalDurationSeconds)
+                }
+              </span>
+            </div>
+            <div className={cn(
+              "flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.1em] transition-all",
+              saveState === "saved" ? "text-[oklch(0.72_0.16_160)]" : saveState === "saving" ? "text-amber-400" : "text-muted-foreground"
+            )}>
+              {saveState === "saving" ? (
+                <Loader2 className="w-3 h-3 animate-spin" />
+              ) : (
+                <div className={cn("w-1.5 h-1.5 rounded-full", saveState === "saved" ? "bg-[oklch(0.72_0.16_160)] shadow-[0_0_8px_oklch(0.72_0.16_160)]" : "bg-muted-foreground")} />
+              )}
+              {saveState === "saved" ? "Saved" : saveState === "saving" ? "Syncing" : "Unsaved"}
+            </div>
           </div>
 
           <div className="flex items-center gap-2">
@@ -878,15 +879,15 @@ export default function ScriptDetails({ scriptId }: { scriptId: string }) {
                 </Button>
               } />
               <DropdownMenuContent align="end" className="bg-card border-white/10 w-48 p-1.5">
-                <DropdownMenuItem 
-                  className="text-xs font-semibold cursor-pointer rounded-lg py-2" 
+                <DropdownMenuItem
+                  className="text-xs font-semibold cursor-pointer rounded-lg py-2"
                   onClick={() => setExportOpen(true)}
                 >
                   <Download className="w-3.5 h-3.5 mr-2" />
                   Export File
                 </DropdownMenuItem>
-                <DropdownMenuItem 
-                  className="text-xs font-semibold cursor-pointer rounded-lg py-2" 
+                <DropdownMenuItem
+                  className="text-xs font-semibold cursor-pointer rounded-lg py-2"
                   onClick={handleDuplicate}
                   disabled={isActionLoading}
                 >
@@ -894,7 +895,7 @@ export default function ScriptDetails({ scriptId }: { scriptId: string }) {
                   Duplicate Script
                 </DropdownMenuItem>
                 <DropdownMenuSeparator className="bg-white/5 mx-1" />
-                <DropdownMenuItem 
+                <DropdownMenuItem
                   className="text-xs font-semibold text-destructive cursor-pointer focus:text-destructive rounded-lg py-2"
                   onClick={handleDeleteScript}
                   disabled={isDeletingScript}
@@ -946,7 +947,7 @@ export default function ScriptDetails({ scriptId }: { scriptId: string }) {
                   </select>
                 </div>
               </div>
-              
+
               {editingTitle ? (
                 <input
                   autoFocus
@@ -983,8 +984,8 @@ export default function ScriptDetails({ scriptId }: { scriptId: string }) {
 
           {/* Thumbnail preview */}
           <div className="relative group/thumb">
-             <div className="absolute -inset-2 bg-gradient-to-r from-primary/20 to-secondary/20 rounded-[2rem] blur-xl opacity-50 group-hover/thumb:opacity-100 transition-opacity duration-500" />
-             <div className="relative aspect-[16/9] w-full rounded-2xl overflow-hidden border border-white/10 bg-black/40 shadow-2xl">
+            <div className="absolute -inset-2 bg-gradient-to-r from-primary/20 to-secondary/20 rounded-[2rem] blur-xl opacity-50 group-hover/thumb:opacity-100 transition-opacity duration-500" />
+            <div className="relative aspect-[16/9] w-full rounded-2xl overflow-hidden border border-white/10 bg-black/40 shadow-2xl">
               {script.thumbnail_url || script.thumbnail_base64 ? (
                 <Image
                   src={script.thumbnail_url ?? (script.thumbnail_base64?.startsWith('data:') ? script.thumbnail_base64 : `data:image/webp;base64,${script.thumbnail_base64}`)}
@@ -1001,9 +1002,9 @@ export default function ScriptDetails({ scriptId }: { scriptId: string }) {
                 </div>
               )}
               <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover/thumb:opacity-100 transition-opacity duration-300" />
-              <Button 
-                variant="secondary" 
-                size="sm" 
+              <Button
+                variant="secondary"
+                size="sm"
                 className="absolute bottom-3 right-3 h-8 px-3 rounded-lg text-[10px] font-bold uppercase tracking-widest opacity-0 group-hover/thumb:opacity-100 translate-y-2 group-hover/thumb:translate-y-0 transition-all duration-300 shadow-xl"
                 onClick={() => router.push("/generate/thumbnail")}
               >
@@ -1030,12 +1031,12 @@ export default function ScriptDetails({ scriptId }: { scriptId: string }) {
                 Focus on high-energy visuals.
               </div>
               <div className="px-4 py-6 border-l border-white/10 flex items-start gap-2">
-                <EditableText 
-                  value={script.hook} 
-                  onChange={(v) => updateField('hook', v)} 
+                <EditableText
+                  value={script.hook}
+                  onChange={(v) => updateField('hook', v)}
                   className="bg-transparent border-0 p-0 hover:bg-transparent flex-1"
                 />
-                 <button
+                <button
                   onClick={async () => {
                     const result = await handleRefine(script.hook, "Make it more punchy.");
                     updateField('hook', result);
@@ -1053,9 +1054,9 @@ export default function ScriptDetails({ scriptId }: { scriptId: string }) {
                 Set the scene.
               </div>
               <div className="px-4 py-6 border-l border-white/10 flex items-start gap-2">
-                <EditableText 
-                  value={script.intro} 
-                  onChange={(v) => updateField('intro', v)} 
+                <EditableText
+                  value={script.intro}
+                  onChange={(v) => updateField('intro', v)}
                   className="bg-transparent border-0 p-0 hover:bg-transparent flex-1"
                 />
                 <button
@@ -1074,49 +1075,49 @@ export default function ScriptDetails({ scriptId }: { scriptId: string }) {
               .filter((line, i) => i !== 0 || line.trim() !== script.hook.trim())
               .map((line, i) => (
                 <div key={i} className="grid grid-cols-[100px_1fr_1.5fr]">
-                <div className="px-4 py-6 text-[10px] font-bold text-muted-foreground uppercase">Scene {i + 1}</div>
-                <div className="px-4 py-6 border-l border-white/10 text-xs text-foreground/70">
-                   <EditableText 
-                    value={script.scenes[i] || "Visual direction pending..."} 
-                    onChange={(v) => {
-                      const updated = [...script.scenes];
-                      updated[i] = v;
-                      updateField('scenes', updated);
-                    }} 
-                    className="bg-transparent border-0 p-0 hover:bg-transparent text-xs"
-                  />
+                  <div className="px-4 py-6 text-[10px] font-bold text-muted-foreground uppercase">Scene {i + 1}</div>
+                  <div className="px-4 py-6 border-l border-white/10 text-xs text-foreground/70">
+                    <EditableText
+                      value={script.scenes[i] || "Visual direction pending..."}
+                      onChange={(v) => {
+                        const updated = [...script.scenes];
+                        updated[i] = v;
+                        updateField('scenes', updated);
+                      }}
+                      className="bg-transparent border-0 p-0 hover:bg-transparent text-xs"
+                    />
+                  </div>
+                  <div className="px-4 py-6 border-l border-white/10 flex items-start gap-2">
+                    <EditableText
+                      value={line}
+                      onChange={(v) => {
+                        const updated = [...script.mainScript];
+                        updated[i] = v;
+                        updateField('mainScript', updated);
+                      }}
+                      className="bg-transparent border-0 p-0 hover:bg-transparent flex-1"
+                    />
+                    <button
+                      onClick={async () => {
+                        const result = await handleRefine(line, "Make this line flow better.");
+                        const updated = [...script.mainScript];
+                        updated[i] = result;
+                        updateField('mainScript', updated);
+                      }}
+                      className="p-1 hover:bg-white/10 rounded text-muted-foreground transition-colors"
+                    >
+                      <Wand2 className="w-3 h-3" />
+                    </button>
+                  </div>
                 </div>
-                <div className="px-4 py-6 border-l border-white/10 flex items-start gap-2">
-                  <EditableText 
-                    value={line} 
-                    onChange={(v) => {
-                      const updated = [...script.mainScript];
-                      updated[i] = v;
-                      updateField('mainScript', updated);
-                    }} 
-                    className="bg-transparent border-0 p-0 hover:bg-transparent flex-1"
-                  />
-                  <button
-                    onClick={async () => {
-                      const result = await handleRefine(line, "Make this line flow better.");
-                      const updated = [...script.mainScript];
-                      updated[i] = result;
-                      updateField('mainScript', updated);
-                    }}
-                    className="p-1 hover:bg-white/10 rounded text-muted-foreground transition-colors"
-                  >
-                    <Wand2 className="w-3 h-3" />
-                  </button>
-                </div>
-              </div>
-            ))}
+              ))}
           </div>
         </div>
       ) : (
         <div className="space-y-6">
           {/* Viral Prediction Card (only in Story mode) */}
           {script.viralScore !== undefined && (
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               className="lux-card p-6 rounded-2xl overflow-hidden relative mb-8"
@@ -1132,11 +1133,11 @@ export default function ScriptDetails({ scriptId }: { scriptId: string }) {
                     {script.viralScore}%
                   </div>
                   <div className="w-full h-1.5 bg-white/5 rounded-full mt-3 overflow-hidden">
-                    <motion.div 
+                    <motion.div
                       initial={{ width: 0 }}
                       animate={{ width: `${script.viralScore}%` }}
                       transition={{ duration: 1, ease: "easeOut" }}
-                      className="h-full bg-gradient-to-r from-[oklch(0.62_0.24_285)] to-[oklch(0.72_0.20_285)]" 
+                      className="h-full bg-gradient-to-r from-[oklch(0.62_0.24_285)] to-[oklch(0.72_0.20_285)]"
                     />
                   </div>
                 </div>
