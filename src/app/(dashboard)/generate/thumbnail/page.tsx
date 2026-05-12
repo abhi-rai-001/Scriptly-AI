@@ -251,7 +251,14 @@ export default function ThumbnailGeneratorPage() {
 
           <div className="relative w-full aspect-[16/9] rounded-2xl border border-white/10 bg-gradient-to-br from-primary/20 to-secondary overflow-hidden">
             {thumbnailImage ? (
-              <Image src={thumbnailImage} alt="Generated thumbnail" fill unoptimized className="object-cover" />
+              <Image 
+                src={thumbnailImage} 
+                alt="Generated thumbnail" 
+                fill 
+                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 800px"
+                unoptimized 
+                className="object-cover" 
+              />
             ) : (
               <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-center">
                 <ImageIcon className="w-12 h-12 text-white/15" />

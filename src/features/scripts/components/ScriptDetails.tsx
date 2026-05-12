@@ -900,6 +900,106 @@ export default function ScriptDetails({ scriptId }: { scriptId: string }) {
         </div>
       ) : null}
 
+      {/* Script Header: Title + Metadata + Thumbnail */}
+      <div className="lux-card rounded-3xl overflow-hidden border border-white/5 bg-gradient-to-br from-secondary/50 to-background/50">
+        <div className="grid md:grid-cols-[1fr_280px] gap-6 p-8">
+          <div className="space-y-6">
+            <div className="space-y-3">
+              <div className="flex flex-wrap items-center gap-3">
+                <Badge variant="outline" className={cn("text-[10px] font-bold uppercase tracking-widest border px-2.5 py-0.5", status.class)}>
+                  {status.label}
+                </Badge>
+                <div className={cn("flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest", platform.bg, platform.color)}>
+                  <PlatformIcon className="w-3 h-3" />
+                  {platform.label}
+                </div>
+                <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-medium">
+                  <Clock className="w-3.5 h-3.5" />
+                  {script.duration}
+                </div>
+                <div className="flex items-center gap-2 ml-auto md:ml-0">
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Project:</span>
+                  <select
+                    value={script.project_id || ""}
+                    onChange={(e) => updateField("project_id", e.target.value || "")}
+                    className="bg-transparent text-xs font-semibold focus:outline-none cursor-pointer hover:text-foreground transition-colors"
+                    disabled={loadingProjects}
+                  >
+                    <option value="" className="bg-card">General</option>
+                    {projects.map((p) => (
+                      <option key={p.id} value={p.id} className="bg-card">{p.name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              
+              {editingTitle ? (
+                <input
+                  autoFocus
+                  value={script.title}
+                  onChange={(e) => setScript((prev) => (prev ? { ...prev, title: e.target.value } : prev))}
+                  onBlur={() => { setEditingTitle(false); markUnsaved(); }}
+                  className="w-full bg-transparent border-b border-[oklch(0.62_0.24_285_/_40%)] text-3xl font-black text-foreground focus:outline-none pb-1"
+                  style={{ fontFamily: "var(--font-cabinet)" }}
+                />
+              ) : (
+                <h1
+                  onClick={() => setEditingTitle(true)}
+                  className="text-3xl font-black tracking-[-0.03em] cursor-text hover:text-[oklch(0.62_0.24_285)] transition-colors flex items-center gap-3 group/title"
+                  style={{ fontFamily: "var(--font-cabinet)" }}
+                >
+                  {script.title}
+                  <Pencil className="w-4 h-4 text-muted-foreground/30 opacity-0 group-hover/title:opacity-100 transition-opacity" />
+                </h1>
+              )}
+            </div>
+
+            <div className="flex items-center gap-4">
+              <div className="flex flex-col">
+                <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 mb-1">Niche</span>
+                <span className="text-sm font-semibold">{script.niche || "General"}</span>
+              </div>
+              <div className="w-px h-8 bg-white/5" />
+              <div className="flex flex-col">
+                <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 mb-1">Created</span>
+                <span className="text-sm font-semibold text-muted-foreground">{new Date(script.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Thumbnail preview */}
+          <div className="relative group/thumb">
+             <div className="absolute -inset-2 bg-gradient-to-r from-primary/20 to-secondary/20 rounded-[2rem] blur-xl opacity-50 group-hover/thumb:opacity-100 transition-opacity duration-500" />
+             <div className="relative aspect-[16/9] w-full rounded-2xl overflow-hidden border border-white/10 bg-black/40 shadow-2xl">
+              {script.thumbnail_url || script.thumbnail_base64 ? (
+                <Image
+                  src={script.thumbnail_url ?? (script.thumbnail_base64?.startsWith('data:') ? script.thumbnail_base64 : `data:image/webp;base64,${script.thumbnail_base64}`)}
+                  alt="Thumbnail"
+                  fill
+                  sizes="(max-width: 768px) 100vw, 280px"
+                  className="object-cover transition-transform duration-700 group-hover/thumb:scale-110"
+                  unoptimized={!!script.thumbnail_base64}
+                />
+              ) : (
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-muted-foreground/40">
+                  <Sparkles className="w-8 h-8" />
+                  <span className="text-[10px] font-bold uppercase tracking-widest">No Thumbnail</span>
+                </div>
+              )}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover/thumb:opacity-100 transition-opacity duration-300" />
+              <Button 
+                variant="secondary" 
+                size="sm" 
+                className="absolute bottom-3 right-3 h-8 px-3 rounded-lg text-[10px] font-bold uppercase tracking-widest opacity-0 group-hover/thumb:opacity-100 translate-y-2 group-hover/thumb:translate-y-0 transition-all duration-300 shadow-xl"
+                onClick={() => router.push("/generate/thumbnail")}
+              >
+                Regenerate
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Main Content Area */}
       {viewMode === 'pro' ? (
         <div className="lux-card rounded-2xl overflow-hidden border-white/10">
@@ -956,8 +1056,10 @@ export default function ScriptDetails({ scriptId }: { scriptId: string }) {
               </div>
             </div>
             {/* Main Script Blocks */}
-            {script.mainScript.map((line, i) => (
-              <div key={i} className="grid grid-cols-[100px_1fr_1.5fr]">
+            {script.mainScript
+              .filter((line, i) => i !== 0 || line.trim() !== script.hook.trim())
+              .map((line, i) => (
+                <div key={i} className="grid grid-cols-[100px_1fr_1.5fr]">
                 <div className="px-4 py-6 text-[10px] font-bold text-muted-foreground uppercase">Scene {i + 1}</div>
                 <div className="px-4 py-6 border-l border-white/10 text-xs text-foreground/70">
                    <EditableText 
@@ -1057,7 +1159,7 @@ export default function ScriptDetails({ scriptId }: { scriptId: string }) {
           <SectionBlock
             label="Main Script"
             emoji="📝"
-            content={script.mainScript}
+            content={script.mainScript.filter((line, i) => i !== 0 || line.trim() !== script.hook.trim())}
             isArray
             onChange={(v) => updateField("mainScript", v)}
             onRefine={handleRefine}
@@ -1125,119 +1227,6 @@ export default function ScriptDetails({ scriptId }: { scriptId: string }) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      {/* Script Header */}
-      <div className="lux-card rounded-3xl overflow-hidden border border-white/5 bg-gradient-to-br from-secondary/50 to-background/50">
-        <div className="grid md:grid-cols-[1fr_280px] gap-6 p-8">
-          <div className="space-y-6">
-            <div className="space-y-3">
-              <div className="flex flex-wrap items-center gap-3">
-                <Badge variant="outline" className={cn("text-[10px] font-bold uppercase tracking-widest border px-2.5 py-0.5", status.class)}>
-                  {status.label}
-                </Badge>
-                <div className={cn("flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest", platform.bg, platform.color)}>
-                  <PlatformIcon className="w-3 h-3" />
-                  {platform.label}
-                </div>
-                <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-medium">
-                  <Clock className="w-3.5 h-3.5" />
-                  {script.duration}
-                </div>
-                <div className="flex items-center gap-2 ml-auto md:ml-0">
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Project:</span>
-                  <select
-                    value={script.project_id || ""}
-                    onChange={(e) => updateField("project_id", e.target.value || "")}
-                    className="bg-transparent text-xs font-semibold focus:outline-none cursor-pointer hover:text-foreground transition-colors"
-                    disabled={loadingProjects}
-                  >
-                    <option value="" className="bg-card">General</option>
-                    {projects.map((p) => (
-                      <option key={p.id} value={p.id} className="bg-card">{p.name}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-              
-              {editingTitle ? (
-                <input
-                  autoFocus
-                  value={script.title}
-                  onChange={(e) => setScript((prev) => (prev ? { ...prev, title: e.target.value } : prev))}
-                  onBlur={() => { setEditingTitle(false); markUnsaved(); }}
-                  className="w-full bg-transparent border-b border-[oklch(0.62_0.24_285_/_40%)] text-3xl font-black text-foreground focus:outline-none pb-1"
-                  style={{ fontFamily: "var(--font-cabinet)" }}
-                />
-              ) : (
-                <h1
-                  onClick={() => setEditingTitle(true)}
-                  className="text-3xl font-black tracking-[-0.03em] cursor-text hover:text-[oklch(0.62_0.24_285)] transition-colors flex items-center gap-3 group/title"
-                  style={{ fontFamily: "var(--font-cabinet)" }}
-                >
-                  {script.title}
-                  <Pencil className="w-4 h-4 text-muted-foreground/30 opacity-0 group-hover/title:opacity-100 transition-opacity" />
-                </h1>
-              )}
-            </div>
-
-            <div className="flex items-center gap-4">
-              <div className="flex flex-col">
-                <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 mb-1">Niche</span>
-                <span className="text-sm font-semibold">{script.niche || "General"}</span>
-              </div>
-              <div className="w-px h-8 bg-white/5" />
-              <div className="flex flex-col">
-                <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60 mb-1">Created</span>
-                <span className="text-sm font-semibold text-muted-foreground">{new Date(script.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Thumbnail preview */}
-          <div className="relative group/thumb">
-             <div className="absolute -inset-2 bg-gradient-to-r from-primary/20 to-secondary/20 rounded-[2rem] blur-xl opacity-50 group-hover/thumb:opacity-100 transition-opacity duration-500" />
-             <div className="relative aspect-[16/9] w-full rounded-2xl overflow-hidden border border-white/10 bg-black/40 shadow-2xl">
-              {script.thumbnail_url || script.thumbnail_base64 ? (
-                <Image
-                  src={script.thumbnail_url ?? (script.thumbnail_base64?.startsWith('data:') ? script.thumbnail_base64 : `data:image/webp;base64,${script.thumbnail_base64}`)}
-                  alt="Thumbnail"
-                  fill
-                  className="object-cover transition-transform duration-700 group-hover/thumb:scale-110"
-                  unoptimized={!!script.thumbnail_base64}
-                />
-              ) : (
-                <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-muted-foreground/40">
-                  <Sparkles className="w-8 h-8" />
-                  <span className="text-[10px] font-bold uppercase tracking-widest">No Thumbnail</span>
-                </div>
-              )}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover/thumb:opacity-100 transition-opacity duration-300" />
-              <Button 
-                variant="secondary" 
-                size="sm" 
-                className="absolute bottom-3 right-3 h-8 px-3 rounded-lg text-[10px] font-bold uppercase tracking-widest opacity-0 group-hover/thumb:opacity-100 translate-y-2 group-hover/thumb:translate-y-0 transition-all duration-300 shadow-xl"
-                onClick={() => router.push("/generate/thumbnail")}
-              >
-                Regenerate
-              </Button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Script Sections */}
-      <div className="space-y-4">
-        {SCRIPT_SECTIONS.map((section) => (
-          <SectionBlock
-            key={section.key}
-            label={section.label}
-            emoji={section.emoji}
-            content={script[section.key] as string | string[]}
-            isArray={section.isArray}
-            onChange={(v) => updateField(section.key, v)}
-          />
-        ))}
-      </div>
 
       {/* Thumbnail Generator */}
       <div className="lux-card rounded-2xl p-6">
