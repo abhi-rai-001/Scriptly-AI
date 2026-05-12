@@ -1,40 +1,85 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🎬 Scriptly AI — Premium Short-Form Content Engine
 
-## Getting Started
+Scriptly AI is a professional, studio-grade SaaS platform designed for high-performing creators to generate viral short-form content (Reels, Shorts, TikToks) in seconds. It compresses the entire pre-production workflow—from ideation and scripting to scene breakdown and thumbnail design—into a single, AI-powered experience.
 
-First, run the development server:
+![Hero Preview](https://github.com/abhi-rai-001/Scriptly-AI/blob/main/public/og-image.png?raw=true)
 
+## ⚡ Key Features
+
+### 📝 AI Script Generation
+- **Viral Hook Engine**: Generates 3-5 second pattern-interrupt hooks designed for maximum retention.
+- **Platform Optimized**: Custom logic for Instagram Reels, YouTube Shorts, and TikTok.
+- **Scene-by-Scene Breakdowns**: Shot-by-shot visual and audio directions for easier filming.
+- **Dynamic Streaming**: Real-time script generation using NDJSON streaming for zero-wait UX.
+
+### 🖼️ AI Thumbnail Studio
+- **Social-Ready Visuals**: Generate eye-catching thumbnails optimized for the "scroll-stop" effect.
+- **Iterative Refinement**: Regenerate thumbnails with custom prompts until you find the perfect match.
+- **Save as Preview**: Instantly set any generated thumbnail as the primary preview for your script.
+
+### 📂 Pro Management & Export
+- **Project Hierarchy**: Organize your content into folders/projects for different clients or niches.
+- **Multi-Format Export**: Download your scripts as **PDF**, **Markdown**, **JSON**, or **DOCX**.
+- **Auto-Saving Drafts**: Never lose work with persistent draft states and debounced auto-saves.
+
+## 🛠️ Tech Stack
+
+- **Core**: Next.js 16 (App Router, Turbopack)
+- **Language**: TypeScript
+- **Styling**: Tailwind CSS 4 + Framer Motion (Cyber-Obsidian & Electric Indigo Theme)
+- **Database & Auth**: Supabase (PostgreSQL, Storage, Auth)
+- **AI Models**: 
+  - **Gemini 2.5 Flash**: Script generation and strategy analysis.
+  - **FLUX.1-schnell (via Hugging Face)**: High-fidelity image generation.
+  - **Pollinations AI**: Resilient fallback for image generation.
+- **Components**: Base UI + custom Shadcn/ui implementation.
+
+## 🚀 Getting Started
+
+### 1. Prerequisites
+- Node.js 18+
+- Supabase Project
+- API Keys for Gemini and Hugging Face
+
+### 2. Environment Setup
+Create a `.env.local` file in the root:
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
+SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
+
+GEMINI_API_KEY=your_gemini_key
+HUGGINGFACE_API_KEY=your_hf_key
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 3. Installation
+```bash
+npm install
+npm run dev
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 📂 Project Structure
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```text
+src/
+├── app/                  # Next.js App Router (Dashboard, Auth, API)
+├── components/           # UI components (Base UI, custom landing, layout)
+├── features/             # Core business logic (Scripts, Projects)
+├── lib/                  # Shared utilities (Supabase, Gemini, formatting)
+├── schemas/              # Zod validation schemas
+├── store/                # Zustand state management
+└── tasks/                # Development tracking and lessons
+docs/                     # Comprehensive technical documentation
+```
 
-## Learn More
+## 📖 Documentation
 
-To learn more about Next.js, take a look at the following resources:
+For deep dives into the system, check out our docs:
+- [Architecture Overview](docs/ARCHITECTURE.md)
+- [Frontend Design System](docs/FRONTEND.md)
+- [Data Flow & API](docs/DATA_FLOW.md)
+- [Product Requirements (PRD)](docs/PRD.md)
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+---
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-### Drafts
-Generated scripts auto-save as `draft` when generation completes, even before manual save. You can open drafts from the dashboard, edit the script in `/script/[id]`, promote a draft to `ready` with **Save Script**, or delete it from both dashboard cards and script view. Thumbnail retries now replace the previous stored thumbnail so only the latest regenerated thumbnail is kept.
-
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Developed by the Scriptly AI Team. Turn ideas into viral content in seconds.
