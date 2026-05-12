@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { saveScriptSchema } from "@/schemas/api";
+import { revalidatePath } from "next/cache";
+import { randomUUID } from "crypto";
+
+const THUMBNAIL_BUCKET = process.env.SUPABASE_THUMBNAIL_BUCKET || "thumbnails";
 
 export async function GET(req: NextRequest) {
   const supabase = await createClient();
@@ -28,6 +32,37 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({ scripts: data, total: data.length });
 }
 
+async function uploadThumbnailIfPresent(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string,
+  base64?: string
+) {
+  if (!base64) return null;
+
+  try {
+    const normalizedBase64 = base64.includes(",") ? (base64.split(",").pop() || "") : base64;
+    if (!normalizedBase64) return null;
+
+    const buf = Buffer.from(normalizedBase64, "base64");
+    const name = `${userId}/${randomUUID()}.png`;
+
+    const { error: uploadError } = await supabase.storage
+      .from(THUMBNAIL_BUCKET)
+      .upload(name, buf, { contentType: "image/png", upsert: true });
+
+    if (uploadError) {
+      console.error("Thumbnail upload error:", uploadError);
+      return null;
+    }
+
+    const { data: publicData } = supabase.storage.from(THUMBNAIL_BUCKET).getPublicUrl(name);
+    return publicData?.publicUrl || null;
+  } catch (err) {
+    console.error("Failed to upload thumbnail:", err);
+    return null;
+  }
+}
+
 export async function POST(req: NextRequest) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -41,17 +76,20 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid input", details: validation.error.flatten() }, { status: 400 });
   }
 
-  const payload = { ...validation.data, user_id: user.id };
+  const payload = {
+    ...validation.data,
+    user_id: user.id,
+  } as typeof validation.data & {
+    user_id: string;
+    thumbnail_base64?: string;
+    thumbnail_url?: string;
+  };
 
-  // Note: if thumbnail_base64 is provided, we should upload it to Supabase Storage
-  // and set thumbnail_url. For now, since storage bucket isn't fully configured with policies,
-  // we could just ignore or handle it carefully.
+  let thumbnailUrl: string | null = null;
   if (payload.thumbnail_base64) {
-    // 1. Decode base64
-    // 2. Upload to 'thumbnails' bucket
-    // 3. payload.thumbnail_url = public URL
-    // For MVP, we will omit it to avoid breaking if storage isn't ready.
+    thumbnailUrl = await uploadThumbnailIfPresent(supabase, user.id, payload.thumbnail_base64);
     delete payload.thumbnail_base64;
+    if (thumbnailUrl) payload.thumbnail_url = thumbnailUrl;
   }
 
   const { data, error } = await supabase
@@ -61,5 +99,7 @@ export async function POST(req: NextRequest) {
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  revalidatePath("/dashboard");
+  revalidatePath("/projects");
   return NextResponse.json(data);
 }

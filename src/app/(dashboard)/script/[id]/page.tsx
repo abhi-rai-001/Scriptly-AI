@@ -1,6 +1,6 @@
-import ScriptViewPage from "@/components/dashboard/ScriptViewPage";
+import ScriptDetails from "@/features/scripts/components/ScriptDetails";
 
 export default async function ScriptPage(props: { params: Promise<{ id: string }> }) {
   const { id } = await props.params;
-  return <ScriptViewPage scriptId={id} />;
+  return <ScriptDetails scriptId={id} />;
 }

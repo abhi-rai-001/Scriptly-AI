@@ -58,6 +58,7 @@ CREATE TABLE scripts (
   platform        TEXT NOT NULL,         -- 'instagram' | 'youtube_shorts' | 'tiktok'
   content_style   TEXT NOT NULL,         -- 'educational' | 'entertaining' | 'motivational' | 'controversial'
   duration        TEXT NOT NULL,         -- '15s' | '30s' | '60s'
+  language        TEXT DEFAULT 'English',
 
   -- AI generated outputs
   title           TEXT,
@@ -69,6 +70,13 @@ CREATE TABLE scripts (
 
   -- Thumbnail
   thumbnail_url   TEXT,                  -- Supabase Storage URL
+
+  -- Lifecycle status
+  status          TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'ready', 'published')),
+
+  -- Viral Prediction
+  viral_score     INTEGER CHECK (viral_score >= 0 AND viral_score <= 100),
+  viral_analysis  TEXT,
 
   -- Prompt tracking (for debugging/iterating)
   prompt_used     JSONB,                 -- stored prompt templates used
@@ -128,6 +136,7 @@ path:   {user_id}/{script_id}.png
   "platform": "instagram",
   "style": "educational",
   "duration": "60s",
+  "language": "English",
   "additionalInstructions": "Use an authoritative tone and end with a strong CTA for comments."
 }
 ```
@@ -140,7 +149,9 @@ path:   {user_id}/{script_id}.png
   "script": "Let's talk about the elephant in the room...",
   "scene_breakdown": [ ...scene objects ],
   "cta": "Follow for more tech breakdowns that actually matter.",
-  "hashtags": ["#AI", "#ArtificialIntelligence", "#FutureOfWork", ...]
+  "hashtags": ["#AI", "#ArtificialIntelligence", "#FutureOfWork", ...],
+  "viral_score": 85,
+  "viral_analysis": "Predicted high retention due to strong emotional hook and educational value."
 }
 ```
 

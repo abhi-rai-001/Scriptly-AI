@@ -10,7 +10,10 @@ export async function GET() {
 
   const { data, error } = await supabase
     .from("projects")
-    .select("*")
+    .select(`
+      *,
+      scripts:scripts(count)
+    `)
     .order("created_at", { ascending: false });
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });

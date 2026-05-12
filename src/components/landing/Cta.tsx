@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { Sparkles } from "lucide-react";
 
-export default function LuxCta() {
+export default function Cta() {
   return (
     <section className="py-28 relative overflow-hidden">
       {/* Mesh gradient */}

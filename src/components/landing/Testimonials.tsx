@@ -99,7 +99,7 @@ function TestimonialCard({ t }: { t: typeof testimonials[0] }) {
   );
 }
 
-export default function LuxTestimonials() {
+export default function Testimonials() {
   const row1 = testimonials.slice(0, 4);
   const row2 = testimonials.slice(4, 8);
 

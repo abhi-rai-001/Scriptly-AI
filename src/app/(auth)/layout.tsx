@@ -1,6 +1,5 @@
 import { ReactNode } from "react";
 import Link from "next/link";
-import { ScriptlyLogo } from "@/components/landing/LuxNavbar";
 import { Star } from "lucide-react";
 
 const testimonials = [
@@ -47,10 +46,9 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
 
         {/* Brand */}
         <div className="relative z-10">
-          <Link href="/" className="inline-flex items-center gap-2.5 group">
-            <ScriptlyLogo className="w-8 h-8 transition-transform group-hover:scale-105 duration-300" />
+          <Link href="/" className="inline-flex items-center group">
             <span
-              className="text-xl font-bold tracking-tight text-foreground"
+              className="text-xl font-black tracking-[-0.02em] text-foreground"
               style={{ fontFamily: "var(--font-cabinet)" }}
             >
               Scriptly<span className="gradient-text-violet">AI</span>
@@ -109,10 +107,9 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
       <div className="flex-1 flex flex-col items-center justify-center p-6 relative">
         {/* Mobile Brand */}
         <div className="absolute top-6 left-6 lg:hidden">
-          <Link href="/" className="inline-flex items-center gap-2">
-            <ScriptlyLogo className="w-7 h-7" />
+          <Link href="/" className="inline-flex items-center">
             <span
-              className="text-base font-bold text-foreground"
+              className="text-base font-black tracking-[-0.02em] text-foreground"
               style={{ fontFamily: "var(--font-cabinet)" }}
             >
               Scriptly<span className="gradient-text-violet">AI</span>

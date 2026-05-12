@@ -21,6 +21,8 @@ export interface GeneratedScript {
   cta: string;
   hashtags: string[];
   sceneBreakdown: SceneBreakdownItem[];
+  viralScore?: number;
+  viralAnalysis?: string;
 }
 
 interface GenerationState {
@@ -35,12 +37,16 @@ interface GenerationState {
   // Generated Content
   result: GeneratedScript | null;
   thumbnailImage: string | null;
+  thumbnailUrl: string | null;
+  thumbnailStoragePath: string | null;
 
   // Actions
   setStep: (step: number) => void;
   setForm: (form: Partial<GenerateScriptInput>) => void;
   setResult: (result: GeneratedScript | null) => void;
   setThumbnailImage: (image: string | null) => void;
+  setThumbnailUrl: (url: string | null) => void;
+  setThumbnailStoragePath: (path: string | null) => void;
   setIsGenerating: (isGenerating: boolean) => void;
   setError: (error: string | null) => void;
   resetAll: () => void;
@@ -53,6 +59,7 @@ const initialForm: GenerateScriptInput = {
   duration: "60s",
   style: "educational",
   additionalInstructions: "",
+  language: "English",
 };
 
 export const useGenerationStore = create<GenerationState>()(
@@ -64,6 +71,8 @@ export const useGenerationStore = create<GenerationState>()(
       form: initialForm,
       result: null,
       thumbnailImage: null,
+      thumbnailUrl: null,
+      thumbnailStoragePath: null,
 
       setStep: (step) => set({ step }),
       setForm: (form) =>
@@ -72,6 +81,8 @@ export const useGenerationStore = create<GenerationState>()(
         })),
       setResult: (result) => set({ result }),
       setThumbnailImage: (thumbnailImage) => set({ thumbnailImage }),
+      setThumbnailUrl: (thumbnailUrl) => set({ thumbnailUrl }),
+      setThumbnailStoragePath: (thumbnailStoragePath) => set({ thumbnailStoragePath }),
       setIsGenerating: (isGenerating) => set({ isGenerating }),
       setError: (error) => set({ error }),
       resetAll: () =>
@@ -82,6 +93,8 @@ export const useGenerationStore = create<GenerationState>()(
           form: initialForm,
           result: null,
           thumbnailImage: null,
+          thumbnailUrl: null,
+          thumbnailStoragePath: null,
         }),
     }),
     {

@@ -4,6 +4,8 @@ import { z } from "zod";
 export const titleAndHookSchema = z.object({
   title: z.string(),
   hook: z.string(),
+  viral_score: z.number().min(0).max(100).optional(),
+  viral_analysis: z.string().optional(),
 });
 
 export type TitleAndHookOutput = z.infer<typeof titleAndHookSchema>;

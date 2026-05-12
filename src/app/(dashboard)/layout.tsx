@@ -1,6 +1,6 @@
 import { ReactNode } from "react";
-import { SidebarContent } from "@/components/dashboard/SidebarContent";
-import { Topbar } from "@/components/dashboard/Topbar";
+import { Sidebar } from "@/components/layout/Sidebar";
+import { Topbar } from "@/components/layout/Topbar";
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   return (
@@ -13,7 +13,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 
       {/* Desktop Sidebar */}
       <aside className="hidden md:block w-72 flex-shrink-0 z-10 border-r border-white/[0.04] relative">
-        <SidebarContent />
+        <Sidebar />
       </aside>
 
       {/* Main Content Area */}

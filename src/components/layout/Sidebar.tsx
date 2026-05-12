@@ -13,7 +13,6 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { ScriptlyLogo } from "@/components/landing/LuxNavbar";
 
 const navItems = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -28,17 +27,16 @@ const recentProjects = [
   { name: "Finance Shorts", color: "bg-[oklch(0.80_0.18_85)]" },
 ];
 
-export function SidebarContent() {
+export function Sidebar() {
   const pathname = usePathname();
 
   return (
     <div className="flex flex-col h-full border-r border-white/5" style={{ background: "oklch(0.14 0.007 285)" }}>
       {/* Brand Header */}
       <div className="h-20 px-5 flex items-center border-b border-white/5">
-        <Link href="/dashboard" className="inline-flex items-center gap-2.5 group">
-          <ScriptlyLogo className="w-8 h-8 transition-transform duration-300 group-hover:scale-105" />
+        <Link href="/dashboard" className="inline-flex items-center group">
           <span
-            className="text-base font-bold tracking-tight text-foreground"
+            className="text-base font-black tracking-[-0.02em] text-foreground"
             style={{ fontFamily: "var(--font-cabinet)" }}
           >
             Scriptly<span className="gradient-text-violet">AI</span>

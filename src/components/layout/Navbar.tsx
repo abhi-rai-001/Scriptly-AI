@@ -55,11 +55,11 @@ const navLinks = [
   { label: "Testimonials", href: "#testimonials" },
 ];
 
-interface LuxNavbarProps {
+interface NavbarProps {
   isAuthenticated: boolean;
 }
 
-export default function LuxNavbar({ isAuthenticated }: LuxNavbarProps) {
+export default function Navbar({ isAuthenticated }: NavbarProps) {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -80,10 +80,9 @@ export default function LuxNavbar({ isAuthenticated }: LuxNavbarProps) {
     >
       <div className="mx-auto max-w-7xl px-6 flex items-center justify-between">
         {/* Brand */}
-        <Link href="/" className="flex items-center gap-2.5 group">
-          <ScriptlyLogo className="w-8 h-8 transition-transform duration-300 group-hover:scale-105" />
+        <Link href="/" className="flex items-center group">
           <span
-            className="text-lg font-bold tracking-tight text-foreground"
+            className="text-xl font-black tracking-[-0.03em] text-foreground"
             style={{ fontFamily: "var(--font-cabinet)" }}
           >
             Scriptly<span className="gradient-text-violet">AI</span>

@@ -60,7 +60,7 @@ const plans = [
   },
 ];
 
-export default function LuxPricing() {
+export default function Pricing() {
   const [annual, setAnnual] = useState(true);
 
   return (

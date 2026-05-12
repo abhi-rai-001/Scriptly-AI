@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
-import Link from "next/link";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useGenerationStore } from "@/store/generationStore";
 import {
   FileVideo,
   TrendingUp,
@@ -11,10 +12,11 @@ import {
   MoreHorizontal,
   Trash2,
   Copy,
-  ExternalLink,
   Plus,
   Search,
   SlidersHorizontal,
+  Loader2,
+  ExternalLink,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -26,12 +28,11 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 // ─── Types ───────────────────────────────────────────────
-type Platform = "instagram" | "youtube" | "tiktok";
-type Status = "draft" | "ready" | "published";
+type Platform = "instagram" | "youtube" | "youtube_shorts" | "tiktok";
+type Status = "draft" | "ready" | "published" | string;
 
 interface ScriptCard {
   id: string;
@@ -41,6 +42,30 @@ interface ScriptCard {
   status: Status;
   createdAt: string;
   duration: string;
+  thumbnailUrl: string | null;
+  projectId?: string | null;
+  projectName?: string;
+  viralScore?: number;
+}
+
+interface ProjectRow {
+  id: string;
+  name: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+interface ScriptRow {
+  id: string;
+  title: string;
+  niche: string;
+  platform: Platform;
+  status: Status;
+  created_at?: string;
+  duration: string;
+  project_id?: string | null;
+  thumbnail_url?: string | null;
+  viral_score?: number;
 }
 
 // ─── Brand SVG icons ──────────────────────────────────────
@@ -60,27 +85,11 @@ function YoutubeIcon({ className }: { className?: string }) {
   );
 }
 
-// ─── Mock data ───────────────────────────────────────────
-const MOCK_SCRIPTS: ScriptCard[] = [
-  { id: "1", title: "5 AI Tools That Will Replace Your Job by 2026", niche: "Tech", platform: "youtube", status: "ready", createdAt: "2 hours ago", duration: "60s" },
-  { id: "2", title: "Morning Routine That Made Me $10K/Month", niche: "Finance", platform: "instagram", status: "published", createdAt: "Yesterday", duration: "30s" },
-  { id: "3", title: "I Tried 30 Days of Cold Showers — Here's What Happened", niche: "Wellness", platform: "tiktok", status: "draft", createdAt: "3 days ago", duration: "45s" },
-  { id: "4", title: "The Dark Truth About Influencer Marketing", niche: "Marketing", platform: "youtube", status: "ready", createdAt: "4 days ago", duration: "60s" },
-  { id: "5", title: "Why Your TikToks Are Flopping (Fix This Now)", niche: "Social Media", platform: "tiktok", status: "ready", createdAt: "5 days ago", duration: "30s" },
-  { id: "6", title: "I Automated My Entire Content Business", niche: "Business", platform: "instagram", status: "draft", createdAt: "1 week ago", duration: "45s" },
-];
-
-const STATS = [
-  { label: "Total Scripts", value: "24", icon: FileVideo, delta: "+3 this week", accent: "oklch(0.62 0.24 285)" },
-  { label: "Published", value: "18", icon: TrendingUp, delta: "+2 this week", accent: "oklch(0.72 0.16 160)" },
-  { label: "Credits Left", value: "88", icon: Sparkles, delta: "of 100 monthly", accent: "oklch(0.80 0.18 85)" },
-  { label: "Projects", value: "6", icon: FolderOpen, delta: "Across 3 niches", accent: "oklch(0.68 0.20 220)" },
-];
-
 // ─── Platform config ──────────────────────────────────────
 const PLATFORM_CONFIG = {
   instagram: { label: "Instagram", icon: InstagramIcon, color: "text-pink-400", bg: "bg-pink-500/10" },
   youtube: { label: "YouTube", icon: YoutubeIcon, color: "text-red-400", bg: "bg-red-500/10" },
+  youtube_shorts: { label: "YouTube Shorts", icon: YoutubeIcon, color: "text-red-400", bg: "bg-red-500/10" },
   tiktok: { label: "TikTok", icon: () => <span className="text-xs font-bold">TT</span>, color: "text-white", bg: "bg-white/10" },
 };
 
@@ -90,12 +99,67 @@ const STATUS_CONFIG = {
   published: { label: "Published", class: "bg-green-500/10 text-green-400 border-green-500/20" },
 };
 
+function formatRelativeTime(value?: string) {
+  if (!value) return "Recently";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+
+  const diffSeconds = Math.round((Date.now() - date.getTime()) / 1000);
+  const units: [number, Intl.RelativeTimeFormatUnit][] = [
+    [60, "second"],
+    [60, "minute"],
+    [24, "hour"],
+    [7, "day"],
+    [4.34524, "week"],
+    [12, "month"],
+    [Number.POSITIVE_INFINITY, "year"],
+  ];
+
+  let duration = diffSeconds;
+  let unit: Intl.RelativeTimeFormatUnit = "second";
+  for (const [threshold, nextUnit] of units) {
+    if (Math.abs(duration) < threshold) {
+      unit = nextUnit;
+      break;
+    }
+    duration = Math.round(duration / threshold);
+    unit = nextUnit;
+  }
+
+  return new Intl.RelativeTimeFormat("en", { numeric: "auto" }).format(-duration, unit);
+}
+
+function normalizePlatform(platform: string): Platform {
+  if (platform === "youtube_shorts") return "youtube_shorts";
+  if (platform === "instagram" || platform === "youtube" || platform === "tiktok") return platform;
+  return "instagram";
+}
+
+function normalizeStatus(status: string): keyof typeof STATUS_CONFIG {
+  if (status === "draft" || status === "ready" || status === "published") return status;
+  return "draft";
+}
+
 // ─── Stat Card ────────────────────────────────────────────
-function StatCard({ label, value, icon: Icon, delta, accent }: typeof STATS[0]) {
+interface StatItem {
+  label: string;
+  value: string;
+  icon: typeof FileVideo;
+  delta: string;
+  accent: string;
+  onClick?: () => void;
+  active?: boolean;
+}
+
+function StatCard({ label, value, icon: Icon, delta, accent, onClick, active }: StatItem) {
   return (
     <div
-      className="lux-card rounded-2xl p-5 flex flex-col gap-3"
-      style={{ borderTop: `2px solid ${accent}30` }}
+      onClick={onClick}
+      className={cn(
+        "lux-card rounded-2xl p-5 flex flex-col gap-3 cursor-pointer transition-all duration-300",
+        active ? "ring-2 ring-primary/40 border-primary/20" : "hover:border-white/15"
+      )}
+      style={{ borderTop: `2px solid ${accent}${active ? '80' : '30'}` }}
     >
       <div className="flex items-center justify-between">
         <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-muted-foreground">{label}</p>
@@ -118,45 +182,82 @@ function StatCard({ label, value, icon: Icon, delta, accent }: typeof STATS[0]) 
 }
 
 // ─── Script Card ─────────────────────────────────────────
-function ScriptCardComponent({ script }: { script: ScriptCard }) {
+function ScriptCardComponent({ 
+  script, 
+  handleDuplicate,
+  handleDelete,
+  isActionLoading,
+}: { 
+  script: ScriptCard; 
+  handleDuplicate: (id: string) => void;
+  handleDelete: (id: string) => void;
+  isActionLoading: string | null;
+}) {
+  const router = useRouter();
   const platform = PLATFORM_CONFIG[script.platform];
-  const status = STATUS_CONFIG[script.status];
+  const status = STATUS_CONFIG[normalizeStatus(script.status)];
   const PlatformIcon = platform.icon;
 
   return (
-    <div className="lux-card rounded-2xl overflow-hidden group">
+    <div 
+      onClick={() => router.push(`/script/${script.id}`)}
+      className="lux-card rounded-2xl overflow-hidden group border border-white/5 hover:border-[oklch(0.62_0.24_285_/_30%)] transition-all duration-300 cursor-pointer active:scale-[0.98]"
+    >
       {/* Thumbnail area */}
-      <div className="relative h-36 flex items-center justify-center overflow-hidden"
-        style={{
-          background: `
-            radial-gradient(ellipse at top left, oklch(0.62 0.24 285 / 12%) 0%, transparent 60%),
-            oklch(0.16 0.008 280)
-          `
-        }}
-      >
-        {/* Grid pattern */}
-        <div className="absolute inset-0 opacity-[0.04]"
-          style={{ backgroundImage: "linear-gradient(to right, white 1px, transparent 1px), linear-gradient(to bottom, white 1px, transparent 1px)", backgroundSize: "28px 28px" }} />
-        <Sparkles className="w-8 h-8 text-[oklch(0.62_0.24_285)] opacity-30" />
+      <div className="relative h-40 flex items-center justify-center overflow-hidden bg-secondary/30">
+        {script.thumbnailUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img 
+            src={script.thumbnailUrl} 
+            alt={script.title} 
+            className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+          />
+        ) : (
+          <>
+            {/* Grid pattern fallback */}
+            <div className="absolute inset-0 opacity-[0.04]"
+              style={{ backgroundImage: "linear-gradient(to right, white 1px, transparent 1px), linear-gradient(to bottom, white 1px, transparent 1px)", backgroundSize: "28px 28px" }} />
+            <Sparkles className="w-8 h-8 text-[oklch(0.62_0.24_285)] opacity-30" />
+          </>
+        )}
+
+        {/* Overlays */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-60" />
 
         {/* Platform badge */}
-        <div className={cn("absolute top-3 left-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold", platform.bg, platform.color)}>
+        <div className={cn("absolute top-3 left-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider backdrop-blur-md", platform.bg, platform.color)}>
           <PlatformIcon className="w-3 h-3" />
           {platform.label}
         </div>
         {/* Duration */}
-        <div className="absolute top-3 right-3 flex items-center gap-1 px-2 py-1 rounded-full bg-black/50 text-xs text-white/70 backdrop-blur-sm">
+        <div className="absolute top-3 right-3 flex items-center gap-1 px-2 py-1 rounded-full bg-black/60 text-[10px] font-bold text-white/90 backdrop-blur-md">
           <Clock className="w-2.5 h-2.5" />
           {script.duration}
         </div>
+
+        {/* Viral Score Badge */}
+        {script.viralScore !== undefined && (
+          <div className="absolute bottom-3 left-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[oklch(0.62_0.24_285_/_60%)] text-[10px] font-bold text-white backdrop-blur-md border border-white/10">
+            <TrendingUp className="w-3 h-3" />
+            {script.viralScore}%
+          </div>
+        )}
       </div>
 
       {/* Body */}
       <div className="p-4">
         <div className="flex items-start justify-between gap-2 mb-3">
-          <h3 className="text-sm font-semibold leading-snug text-foreground/90 line-clamp-2 flex-1">
-            {script.title}
-          </h3>
+          <div className="flex flex-col gap-1 flex-1">
+            <h3 className="text-sm font-semibold leading-snug text-foreground/90 line-clamp-2">
+              {script.title}
+            </h3>
+            {script.projectName && (
+              <div className="flex items-center gap-1 text-[10px] text-muted-foreground font-medium">
+                <FolderOpen className="w-2.5 h-2.5" />
+                {script.projectName}
+              </div>
+            )}
+          </div>
           <DropdownMenu>
             <DropdownMenuTrigger render={
               <Button variant="ghost" size="icon" className="w-7 h-7 flex-shrink-0 text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity rounded-lg">
@@ -164,15 +265,25 @@ function ScriptCardComponent({ script }: { script: ScriptCard }) {
               </Button>
             } />
             <DropdownMenuContent align="end" className="w-40 bg-card border-white/10">
-              <DropdownMenuItem className="text-sm cursor-pointer">
+              <DropdownMenuItem className="text-sm cursor-pointer" onClick={(e) => { e.stopPropagation(); router.push(`/script/${script.id}`); }}>
                 <ExternalLink className="w-3.5 h-3.5 mr-2" /> View Script
               </DropdownMenuItem>
-              <DropdownMenuItem className="text-sm cursor-pointer">
-                <Copy className="w-3.5 h-3.5 mr-2" /> Duplicate
+              <DropdownMenuItem 
+                className="text-sm cursor-pointer" 
+                onClick={(e) => { e.stopPropagation(); handleDuplicate(script.id); }}
+                disabled={isActionLoading === script.id}
+              >
+                {isActionLoading === script.id ? <Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" /> : <Copy className="w-3.5 h-3.5 mr-2" />}
+                Duplicate
               </DropdownMenuItem>
               <DropdownMenuSeparator className="bg-white/8" />
-              <DropdownMenuItem className="text-sm text-destructive cursor-pointer focus:text-destructive">
-                <Trash2 className="w-3.5 h-3.5 mr-2" /> Delete
+              <DropdownMenuItem 
+                className="text-sm text-destructive cursor-pointer focus:text-destructive" 
+                onClick={(e) => { e.stopPropagation(); handleDelete(script.id); }}
+                disabled={isActionLoading === script.id}
+              >
+                {isActionLoading === script.id ? <Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" /> : <Trash2 className="w-3.5 h-3.5 mr-2" />}
+                Delete
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -187,7 +298,7 @@ function ScriptCardComponent({ script }: { script: ScriptCard }) {
               {script.niche}
             </Badge>
           </div>
-          <p className="text-[11px] text-muted-foreground/50">{script.createdAt}</p>
+          <p className="text-[11px] text-muted-foreground/50">{formatRelativeTime(script.createdAt)}</p>
         </div>
       </div>
     </div>
@@ -196,6 +307,15 @@ function ScriptCardComponent({ script }: { script: ScriptCard }) {
 
 // ─── Empty State ─────────────────────────────────────────
 function EmptyState() {
+  const resetAll = useGenerationStore((state) => state.resetAll);
+  const router = useRouter();
+
+  const handleNewScript = (e: React.MouseEvent) => {
+    e.preventDefault();
+    resetAll();
+    router.push("/generate");
+  };
+
   return (
     <div className="col-span-full flex flex-col items-center justify-center py-24 px-4">
       <div
@@ -214,27 +334,157 @@ function EmptyState() {
       <p className="text-sm text-muted-foreground text-center max-w-xs mb-8 leading-relaxed">
         Generate your first AI-powered script and start building a library that works while you sleep.
       </p>
-      <Link
-        href="/generate"
+      <button
+        onClick={handleNewScript}
         className={cn("btn-amber px-6 py-3 rounded-xl text-sm font-bold inline-flex items-center gap-2")}
       >
         <Plus className="w-4 h-4" />
         Generate Your First Script
-      </Link>
+      </button>
     </div>
   );
 }
 
 // ─── Main Dashboard Page ──────────────────────────────────
 export default function DashboardPage() {
+  const [scripts, setScripts] = useState<ScriptCard[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [platform, setPlatform] = useState<Platform | "all">("all");
+  const [statusFilter, setStatusFilter] = useState<keyof typeof STATUS_CONFIG | "all">("all");
+  const [isActionLoading, setIsActionLoading] = useState<string | null>(null);
 
-  const filtered = MOCK_SCRIPTS.filter((s) => {
-    const matchSearch = s.title.toLowerCase().includes(search.toLowerCase());
-    const matchPlatform = platform === "all" || s.platform === platform;
-    return matchSearch && matchPlatform;
-  });
+  const loadDashboardData = useCallback(async () => {
+    try {
+      setLoading(true);
+      const [scriptsResponse, projectsResponse] = await Promise.all([
+        fetch("/api/scripts"),
+        fetch("/api/projects"),
+      ]);
+
+      const scriptsData = await scriptsResponse.json().catch(() => null);
+      const projectsData = await projectsResponse.json().catch(() => null);
+
+      const rows = (scriptsData?.scripts || []) as ScriptRow[];
+      const pData = (projectsData || []) as ProjectRow[];
+      const projectMap = new Map(pData.map(p => [p.id, p.name]));
+
+      const mappedScripts: ScriptCard[] = rows.map((script) => ({
+        id: script.id,
+        title: script.title || "Untitled Script",
+        niche: script.niche || "General",
+        platform: normalizePlatform(script.platform),
+        status: script.status || "draft",
+        createdAt: script.created_at || "",
+        duration: script.duration || "",
+        thumbnailUrl: script.thumbnail_url || null,
+        projectId: script.project_id,
+        viralScore: script.viral_score,
+        projectName: script.project_id ? projectMap.get(script.project_id) : undefined,
+      }));
+
+      setScripts(mappedScripts);
+    } catch (loadError: unknown) {
+      setError(loadError instanceof Error ? loadError.message : "Failed to load dashboard data");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    // Fetch dashboard data on mount
+    const fetchData = async () => {
+      await loadDashboardData();
+    };
+    fetchData();
+  }, [loadDashboardData]);
+
+  const handleDuplicate = async (id: string) => {
+    setIsActionLoading(id);
+    try {
+      const res = await fetch(`/api/scripts/${id}/duplicate`, { method: "POST" });
+      if (!res.ok) throw new Error("Failed to duplicate");
+      await loadDashboardData();
+    } catch (err) {
+      console.error(err);
+      alert("Failed to duplicate script");
+    } finally {
+      setIsActionLoading(null);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this script?")) return;
+    setIsActionLoading(id);
+    try {
+      const res = await fetch(`/api/scripts/${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to delete");
+      await loadDashboardData();
+    } catch (err) {
+      console.error(err);
+      alert("Failed to delete script");
+    } finally {
+      setIsActionLoading(null);
+    }
+  };
+
+  const stats = useMemo<StatItem[]>(() => {
+    const totalScripts = scripts.length;
+    const published = scripts.filter((s) => s.status === "published").length;
+    const drafts = scripts.filter((s) => s.status === "draft").length;
+    const ready = scripts.filter((s) => s.status === "ready").length;
+
+    return [
+      { 
+        label: "Total Scripts", 
+        value: String(totalScripts), 
+        icon: FileVideo, 
+        delta: "Saved in DB", 
+        accent: "oklch(0.62 0.24 285)",
+        onClick: () => { setStatusFilter("all"); setPlatform("all"); },
+        active: statusFilter === "all" && platform === "all"
+      },
+      { 
+        label: "Published", 
+        value: String(published), 
+        icon: TrendingUp, 
+        delta: "Live in library", 
+        accent: "oklch(0.72 0.16 160)",
+        onClick: () => setStatusFilter("published"),
+        active: statusFilter === "published"
+      },
+      { 
+        label: "Drafts", 
+        value: String(drafts), 
+        icon: Sparkles, 
+        delta: "Awaiting save", 
+        accent: "oklch(0.80 0.18 85)",
+        onClick: () => setStatusFilter("draft"),
+        active: statusFilter === "draft"
+      },
+      { 
+        label: "Ready", 
+        value: String(ready), 
+        icon: FolderOpen, 
+        delta: "Ready to post", 
+        accent: "oklch(0.68 0.20 220)",
+        onClick: () => setStatusFilter("ready"),
+        active: statusFilter === "ready"
+      },
+    ];
+  }, [scripts, statusFilter, platform]);
+
+  const filtered = useMemo(
+    () =>
+      scripts.filter((s) => {
+        const matchSearch = s.title.toLowerCase().includes(search.toLowerCase()) || s.niche.toLowerCase().includes(search.toLowerCase());
+        const matchPlatform = platform === "all" || s.platform === platform;
+        const matchStatus = statusFilter === "all" || s.status === statusFilter;
+        return matchSearch && matchPlatform && matchStatus;
+      }),
+    [platform, scripts, search, statusFilter]
+  );
 
   return (
     <div className="space-y-8">
@@ -253,8 +503,14 @@ export default function DashboardPage() {
 
       {/* Stats Row */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {STATS.map((stat) => <StatCard key={stat.label} {...stat} />)}
+        {stats.map((stat) => <StatCard key={stat.label} {...stat} />)}
       </div>
+
+      {error && (
+        <div className="p-4 rounded-xl border border-destructive/40 bg-destructive/10 text-destructive text-sm">
+          {error}
+        </div>
+      )}
 
       {/* Scripts Section */}
       <div>
@@ -278,16 +534,39 @@ export default function DashboardPage() {
               />
             </div>
 
+            {/* Status filter */}
+            <DropdownMenu>
+              <DropdownMenuTrigger render={
+                <Button variant="outline" size="sm" className={cn(
+                  "h-9 border-white/10 bg-secondary/30 text-sm rounded-xl",
+                  statusFilter !== "all" && "border-primary/40 text-primary"
+                )}>
+                  <Clock className="w-3.5 h-3.5 mr-2" />
+                  {statusFilter === "all" ? "Any Status" : STATUS_CONFIG[statusFilter].label}
+                </Button>
+              } />
+              <DropdownMenuContent align="end" className="bg-card border-white/10 w-40">
+                {(["all", "draft", "ready", "published"] as const).map((s) => (
+                  <DropdownMenuItem key={s} className="text-sm cursor-pointer capitalize" onClick={() => setStatusFilter(s)}>
+                    {s === "all" ? "Any Status" : STATUS_CONFIG[s].label}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+
             {/* Platform filter */}
             <DropdownMenu>
               <DropdownMenuTrigger render={
-                <Button variant="outline" size="sm" className="h-9 border-white/10 bg-secondary/30 text-sm rounded-xl">
+                <Button variant="outline" size="sm" className={cn(
+                  "h-9 border-white/10 bg-secondary/30 text-sm rounded-xl",
+                  platform !== "all" && "border-primary/40 text-primary"
+                )}>
                   <SlidersHorizontal className="w-3.5 h-3.5 mr-2" />
                   {platform === "all" ? "All Platforms" : PLATFORM_CONFIG[platform].label}
                 </Button>
               } />
               <DropdownMenuContent align="end" className="bg-card border-white/10 w-40">
-                {(["all", "instagram", "youtube", "tiktok"] as const).map((p) => (
+                {(["all", "instagram", "youtube_shorts", "youtube", "tiktok"] as const).map((p) => (
                   <DropdownMenuItem key={p} className="text-sm cursor-pointer capitalize" onClick={() => setPlatform(p)}>
                     {p === "all" ? "All Platforms" : PLATFORM_CONFIG[p].label}
                   </DropdownMenuItem>
@@ -299,10 +578,20 @@ export default function DashboardPage() {
 
         {/* Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
-          {filtered.length === 0 ? (
+          {loading ? (
+            <div className="col-span-full py-24 text-center text-sm text-muted-foreground">Loading dashboard data...</div>
+          ) : filtered.length === 0 ? (
             <EmptyState />
           ) : (
-            filtered.map((script) => <ScriptCardComponent key={script.id} script={script} />)
+            filtered.map((script) => (
+              <ScriptCardComponent 
+                key={script.id} 
+                script={script} 
+                handleDuplicate={handleDuplicate}
+                handleDelete={handleDelete}
+                isActionLoading={isActionLoading}
+              />
+            ))
           )}
         </div>
       </div>

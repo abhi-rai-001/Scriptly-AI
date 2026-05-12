@@ -1,23 +1,34 @@
 "use client";
 
-import { useMemo, useState, useCallback } from "react";
-import Image from "next/image";
+import { useMemo, useState, useCallback, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { Document, HeadingLevel, Packer, Paragraph, TextRun } from "docx";
 import {
   AlertCircle,
   Check,
   Clock,
   Copy,
   Download,
-  ImageIcon,
   Loader2,
   RefreshCw,
   Sparkles,
+  TrendingUp,
+  Zap,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import type { GenerateScriptInput } from "@/schemas/api";
 import { useGenerationStore } from "@/store/generationStore";
 import type { 
   Platform, 
@@ -34,11 +45,6 @@ type GenerationChunkType =
   | "scene_breakdown"
   | "hashtags"
   | "error";
-
-interface ThumbnailResponse {
-  imageBase64: string;
-  storagePath: string | null;
-}
 
 interface StreamChunk {
   type: GenerationChunkType;
@@ -137,16 +143,25 @@ function downloadBlob(content: BlobPart, filename: string, type: string) {
   link.href = url;
   link.download = filename;
   link.click();
-  URL.revokeObjectURL(url);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-function buildMarkdownExport(result: GeneratedScript, platformLabel: string, duration: string, niche: string) {
+function escapeXml(value: string) {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&apos;");
+}
+
+function buildMarkdownExport(result: GeneratedScript, form: Pick<GenerateScriptInput, "platform" | "duration" | "niche">) {
   return [
     `# ${result.title}`,
     "",
-    `**Platform:** ${platformLabel}`,
-    `**Duration:** ${duration}`,
-    `**Niche:** ${niche}`,
+    `**Platform:** ${PLATFORM_LABELS[form.platform]}`,
+    `**Duration:** ${form.duration}`,
+    `**Niche:** ${form.niche}`,
     "",
     "## Hook",
     result.hook,
@@ -158,15 +173,59 @@ function buildMarkdownExport(result: GeneratedScript, platformLabel: string, dur
     result.cta,
     "",
     "## Scene Directions",
-    ...result.sceneBreakdown.map((scene) => {
-      const overlay = scene.text_overlay ? ` | Text: ${scene.text_overlay}` : "";
-      return `- Scene ${scene.scene} (${scene.duration}) — Visual: ${scene.visual} | Audio: ${scene.audio}${overlay}`;
-    }),
+    ...result.sceneBreakdown.map((scene) => `- Scene ${scene.scene} (${scene.duration}) — Visual: ${scene.visual} | Audio: ${scene.audio}${scene.text_overlay ? ` | Text: ${scene.text_overlay}` : ""}`),
     "",
     "## Hashtags",
     result.hashtags.join(" "),
     "",
   ].join("\n");
+}
+
+function buildDocxExport(result: GeneratedScript, form: Pick<GenerateScriptInput, "platform" | "duration" | "niche">) {
+  return new Document({
+    sections: [
+      {
+        children: [
+          new Paragraph({ text: result.title, heading: HeadingLevel.TITLE }),
+          new Paragraph({
+            children: [
+              new TextRun({ text: "Platform: ", bold: true }),
+              new TextRun(PLATFORM_LABELS[form.platform]),
+            ],
+          }),
+          new Paragraph({
+            children: [
+              new TextRun({ text: "Duration: ", bold: true }),
+              new TextRun(form.duration),
+            ],
+          }),
+          new Paragraph({
+            children: [
+              new TextRun({ text: "Niche: ", bold: true }),
+              new TextRun(form.niche),
+            ],
+          }),
+          new Paragraph({ text: "" }),
+          new Paragraph({ text: "Hook", heading: HeadingLevel.HEADING_1 }),
+          new Paragraph(result.hook),
+          new Paragraph({ text: "Full Script", heading: HeadingLevel.HEADING_1 }),
+          new Paragraph(result.script),
+          new Paragraph({ text: "CTA", heading: HeadingLevel.HEADING_1 }),
+          new Paragraph(result.cta),
+          new Paragraph({ text: "Scene Directions", heading: HeadingLevel.HEADING_1 }),
+          ...result.sceneBreakdown.map(
+            (scene) =>
+              new Paragraph({
+                text: `Scene ${scene.scene} (${scene.duration}) — ${scene.visual}`,
+                bullet: { level: 0 },
+              })
+          ),
+          new Paragraph({ text: "Hashtags", heading: HeadingLevel.HEADING_1 }),
+          new Paragraph(result.hashtags.join(" ")),
+        ],
+      },
+    ],
+  });
 }
 
 function StepIndicator({ current }: { current: number }) {
@@ -308,6 +367,7 @@ function stringifyScenes(scenes: SceneBreakdownItem[]): string[] {
 }
 
 export default function GeneratePage() {
+  const router = useRouter();
   const {
     step,
     setStep,
@@ -319,13 +379,36 @@ export default function GeneratePage() {
     setForm,
     result,
     setResult,
-    thumbnailImage,
-    setThumbnailImage,
     resetAll,
+    thumbnailImage,
+    thumbnailUrl,
   } = useGenerationStore();
 
-  const [isGeneratingThumbnail, setIsGeneratingThumbnail] = useState(false);
-  const [thumbnailError, setThumbnailError] = useState<string | null>(null);
+  const [exportOpen, setExportOpen] = useState(false);
+  const [savedScriptId, setSavedScriptId] = useState<string | null>(null);
+  const [isSavingScript, setIsSavingScript] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [projects, setProjects] = useState<{ id: string; name: string }[]>([]);
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
+  const [loadingProjects, setLoadingProjects] = useState(false);
+
+  useEffect(() => {
+    async function fetchProjects() {
+      setLoadingProjects(true);
+      try {
+        const res = await fetch("/api/projects");
+        if (res.ok) {
+          const data = await res.json();
+          setProjects(data || []);
+        }
+      } catch (err) {
+        console.error("Failed to fetch projects", err);
+      } finally {
+        setLoadingProjects(false);
+      }
+    }
+    fetchProjects();
+  }, []);
   const [revealedCount, setRevealedCount] = useState(0);
 
   const canGenerate = useMemo(() => form.topic.trim().length > 1 && form.niche.trim().length > 1, [form.topic, form.niche]);
@@ -349,7 +432,122 @@ export default function GeneratePage() {
   const resetAllAndSequence = () => {
     resetAll();
     setRevealedCount(0);
+    setSavedScriptId(null);
+    setSaveError(null);
   };
+
+  const handleExportMarkdown = useCallback(() => {
+    if (!result) return;
+    downloadBlob(buildMarkdownExport(result, form), `${slugify(result.title)}.md`, "text/markdown;charset=utf-8");
+    setExportOpen(false);
+  }, [form, result]);
+
+  const handleExportPdf = useCallback(() => {
+    if (!result) return;
+
+    const popup = window.open("", "_blank", "noopener,noreferrer");
+    if (!popup) {
+      downloadBlob(buildMarkdownExport(result, form), `${slugify(result.title)}.md`, "text/markdown;charset=utf-8");
+      setExportOpen(false);
+      return;
+    }
+
+    popup.document.write(`
+      <!doctype html>
+      <html>
+        <head>
+          <title>${escapeXml(result.title)}</title>
+          <meta charset="utf-8" />
+          <style>
+            body { font-family: Arial, sans-serif; padding: 40px; color: #111827; }
+            h1 { margin: 0 0 16px; }
+            p, li { line-height: 1.6; }
+            ul { padding-left: 20px; }
+          </style>
+        </head>
+        <body>
+          <h1>${escapeXml(result.title)}</h1>
+          <p><strong>Platform:</strong> ${escapeXml(PLATFORM_LABELS[form.platform])}</p>
+          <p><strong>Duration:</strong> ${escapeXml(form.duration)}</p>
+          <p><strong>Niche:</strong> ${escapeXml(form.niche)}</p>
+          <h2>Hook</h2>
+          <p>${escapeXml(result.hook)}</p>
+          <h2>Full Script</h2>
+          <p>${escapeXml(result.script)}</p>
+          <h2>CTA</h2>
+          <p>${escapeXml(result.cta)}</p>
+          <h2>Scene Directions</h2>
+          <ul>${result.sceneBreakdown.map((scene) => `<li>${escapeXml(`Scene ${scene.scene} (${scene.duration}) — ${scene.visual} | ${scene.audio}${scene.text_overlay ? ` | Text: ${scene.text_overlay}` : ""}`)}</li>`).join("")}</ul>
+          <h2>Hashtags</h2>
+          <p>${escapeXml(result.hashtags.join(" "))}</p>
+        </body>
+      </html>
+    `);
+    popup.document.close();
+    popup.focus();
+    popup.print();
+    setExportOpen(false);
+  }, [form, result]);
+
+  const handleExportDocx = useCallback(async () => {
+    if (!result) return;
+    const blob = await Packer.toBlob(buildDocxExport(result, form));
+    downloadBlob(blob, `${slugify(result.title)}.docx`, "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+    setExportOpen(false);
+  }, [form, result]);
+
+  const handleSaveScript = useCallback(async () => {
+    if (!result) return;
+
+    setIsSavingScript(true);
+    setSaveError(null);
+
+    const payload = {
+      project_id: selectedProjectId,
+      topic: form.topic.trim(),
+      niche: form.niche.trim(),
+      platform: form.platform,
+      content_style: form.style,
+      duration: form.duration,
+      title: result.title,
+      hook: result.hook,
+      script: result.script,
+      scene_breakdown: result.sceneBreakdown,
+      cta: result.cta,
+      hashtags: result.hashtags,
+      thumbnail_url: thumbnailUrl,
+      thumbnail_base64: !thumbnailUrl && thumbnailImage ? thumbnailImage : undefined,
+      status: "ready",
+      viral_score: result.viralScore,
+      viral_analysis: result.viralAnalysis,
+    };
+
+    try {
+      const response = await fetch(
+        savedScriptId ? `/api/scripts/${savedScriptId}` : "/api/scripts",
+        {
+          method: savedScriptId ? "PATCH" : "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        }
+      );
+
+      const data = await response.json().catch(() => null);
+      if (!response.ok) {
+        throw new Error(data?.error || data?.message || "Failed to save script");
+      }
+
+      if (!savedScriptId && data?.id) {
+        setSavedScriptId(data.id);
+      }
+    } catch (saveScriptError: unknown) {
+      setSaveError(saveScriptError instanceof Error ? saveScriptError.message : "Failed to save script");
+    } finally {
+      setIsSavingScript(false);
+    }
+  }, [form, result, savedScriptId, thumbnailImage, thumbnailUrl, selectedProjectId]);
+
+
 
   const handleGenerate = async () => {
     if (!canGenerate) return;
@@ -357,9 +555,9 @@ export default function GeneratePage() {
     setStep(1);
     setIsGenerating(true);
     setError(null);
-    setThumbnailError(null);
-    setThumbnailImage(null);
     setResult(null);
+    setSavedScriptId(null);
+    setSaveError(null);
     setRevealedCount(0);
 
     const draft: Partial<GeneratedScript> = {
@@ -378,6 +576,7 @@ export default function GeneratePage() {
           style: form.style,
           duration: form.duration,
           additionalInstructions: (form.additionalInstructions || "").trim() || undefined,
+          language: form.language || "English",
         }),
       });
 
@@ -397,10 +596,12 @@ export default function GeneratePage() {
       const applyChunk = (chunk: StreamChunk) => {
         switch (chunk.type) {
           case "title_and_hook": {
-            const payload = chunk.payload as { title?: string; hook?: string };
+            const payload = chunk.payload as { title?: string; hook?: string; viral_score?: number; viral_analysis?: string };
             if (!payload?.title || !payload?.hook) throw new Error("Invalid title/hook payload.");
             draft.title = payload.title;
             draft.hook = payload.hook;
+            draft.viralScore = payload.viral_score;
+            draft.viralAnalysis = payload.viral_analysis;
             break;
           }
           case "full_script": {
@@ -458,6 +659,8 @@ export default function GeneratePage() {
         cta: draft.cta,
         hashtags: draft.hashtags || [],
         sceneBreakdown: draft.sceneBreakdown || [],
+        viralScore: draft.viralScore,
+        viralAnalysis: draft.viralAnalysis,
       };
 
       setResult(finalResult);
@@ -470,63 +673,65 @@ export default function GeneratePage() {
     }
   };
 
-  const handleGenerateThumbnail = async () => {
+  const handleSaveAsDraft = useCallback(async () => {
     if (!result) return;
 
-    setIsGeneratingThumbnail(true);
-    setThumbnailError(null);
+    setIsSavingScript(true);
+    setSaveError(null);
+
+    const payload = {
+      project_id: selectedProjectId,
+      topic: form.topic.trim(),
+      niche: form.niche.trim(),
+      platform: form.platform,
+      content_style: form.style,
+      duration: form.duration,
+      title: result.title,
+      hook: result.hook,
+      script: result.script,
+      scene_breakdown: result.sceneBreakdown,
+      cta: result.cta,
+      hashtags: result.hashtags,
+      status: "draft",
+      thumbnail_url: thumbnailUrl ?? undefined,
+      thumbnail_base64: (!thumbnailUrl && thumbnailImage) ? thumbnailImage : undefined,
+      viral_score: result.viralScore,
+      viral_analysis: result.viralAnalysis,
+    };
 
     try {
-      const response = await fetch("/api/generate/thumbnail", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title: result.title,
-          hook: result.hook,
-          niche: form.niche,
-          platform: form.platform,
-        }),
-      });
+      const response = await fetch(
+        savedScriptId ? `/api/scripts/${savedScriptId}` : "/api/scripts",
+        {
+          method: savedScriptId ? "PATCH" : "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        }
+      );
 
-      const data = (await response.json()) as Partial<ThumbnailResponse> & { error?: string; details?: string };
-
+      const data = await response.json().catch(() => null);
       if (!response.ok) {
-        throw new Error(data.error || data.details || "Thumbnail generation failed");
+        throw new Error(data?.error || data?.message || "Failed to save script");
       }
 
-      if (!data.imageBase64) {
-        throw new Error("Thumbnail API did not return image data.");
+      if (!savedScriptId && data?.id) {
+        setSavedScriptId(data.id);
       }
-
-      setThumbnailImage(data.imageBase64);
-    } catch (thumbnailGenerationError: unknown) {
-      setThumbnailError(getErrorMessage(thumbnailGenerationError));
+    } catch (saveScriptError: unknown) {
+      setSaveError(saveScriptError instanceof Error ? saveScriptError.message : "Failed to save script");
     } finally {
-      setIsGeneratingThumbnail(false);
+      setIsSavingScript(false);
     }
-  };
+  }, [form, result, savedScriptId, thumbnailImage, thumbnailUrl, selectedProjectId]);
 
-  const handleExportScript = useCallback(() => {
-    if (!result) return;
-
-    const markdown = buildMarkdownExport(
-      result,
-      PLATFORM_LABELS[form.platform],
-      form.duration,
-      form.niche
-    );
-    downloadBlob(markdown, `${slugify(result.title)}.md`, "text/markdown;charset=utf-8");
-  }, [form.duration, form.niche, form.platform, result]);
-
-  const handleDownloadThumbnail = useCallback(async () => {
-    if (!thumbnailImage) return;
-
-    const response = await fetch(thumbnailImage);
-    const blob = await response.blob();
-    const extension = blob.type === "image/png" ? "png" : blob.type === "image/jpeg" ? "jpg" : "webp";
-    downloadBlob(blob, `${slugify(result?.title || "thumbnail")}.${extension}`, blob.type || "image/webp");
-  }, [result?.title, thumbnailImage]);
-
+  // Auto-save as draft once result is generated
+  useEffect(() => {
+    if (!result || savedScriptId || isGenerating) return;
+    const timer = window.setTimeout(() => {
+      void handleSaveAsDraft();
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [result, savedScriptId, isGenerating, handleSaveAsDraft]);
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -543,15 +748,28 @@ export default function GeneratePage() {
       {step === 0 && (
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
           <div>
-            <h1
-              className="text-3xl font-black tracking-[-0.03em] mb-1"
-              style={{ fontFamily: "var(--font-cabinet)" }}
+          <div className="flex items-end justify-between">
+            <div>
+              <h1
+                className="text-3xl font-black tracking-[-0.03em] mb-1"
+                style={{ fontFamily: "var(--font-cabinet)" }}
+              >
+                Generate a Script
+              </h1>
+              <p className="text-sm text-muted-foreground">
+                Fill in your details and get a viral-ready script with hook, scenes, CTA, and hashtags — in under a minute.
+              </p>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={resetAllAndSequence}
+              className="text-muted-foreground hover:text-destructive h-8 px-3 rounded-lg text-xs"
             >
-              Generate a Script
-            </h1>
-            <p className="text-sm text-muted-foreground">
-              Fill in your details and get a viral-ready script with hook, scenes, CTA, and hashtags — in under a minute.
-            </p>
+              <RefreshCw className="w-3.5 h-3.5 mr-2" />
+              Reset Form
+            </Button>
+          </div>
           </div>
 
           <div className="grid gap-6 lux-card rounded-2xl p-6">
@@ -566,6 +784,38 @@ export default function GeneratePage() {
                 className="h-11 bg-secondary/40 border-white/8 focus-visible:ring-[oklch(0.62_0.24_285_/_40%)] rounded-xl"
               />
               <p className="text-xs text-muted-foreground">Be specific. Great inputs create better scripts.</p>
+            </div>
+
+            <div className="grid gap-2">
+              <label className="text-sm font-semibold">
+                Language
+              </label>
+              <select
+                value={form.language || "English"}
+                onChange={(e) => setForm({ language: e.target.value })}
+                className="h-11 w-full bg-secondary/40 border border-white/8 focus:border-[oklch(0.62_0.24_285_/_40%)] outline-none px-4 rounded-xl text-sm appearance-none cursor-pointer"
+              >
+                {["English", "Spanish", "French", "German", "Hindi", "Japanese", "Portuguese", "Italian"].map((lang) => (
+                  <option key={lang} value={lang}>{lang}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="grid gap-2">
+              <label className="text-sm font-semibold">
+                Project (Optional)
+              </label>
+              <select
+                value={selectedProjectId || ""}
+                onChange={(e) => setSelectedProjectId(e.target.value || null)}
+                className="h-11 w-full bg-secondary/40 border border-white/8 focus:border-[oklch(0.62_0.24_285_/_40%)] outline-none px-4 rounded-xl text-sm appearance-none cursor-pointer"
+                disabled={loadingProjects}
+              >
+                <option value="">No Project (General)</option>
+                {projects.map((p) => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </select>
             </div>
 
             <div className="grid gap-2">
@@ -734,16 +984,72 @@ export default function GeneratePage() {
               </h2>
             </div>
             <div className="flex items-center gap-3">
-              <Button variant="outline" size="sm" className="border-white/10 h-9 rounded-xl" onClick={handleExportScript}>
+              <Button variant="outline" size="sm" className="border-white/10 h-9 rounded-xl" onClick={() => setExportOpen(true)}>
                 <Download className="w-3.5 h-3.5 mr-2" />
                 Export
               </Button>
-              <Button size="sm" className="btn-amber border-0 h-9 rounded-xl" disabled>
+              <Button size="sm" className="btn-amber border-0 h-9 rounded-xl" onClick={handleSaveScript} disabled={!result || isSavingScript}>
                 <Sparkles className="w-3.5 h-3.5 mr-2" />
-                Save Script
+                {isSavingScript ? "Saving..." : savedScriptId ? "Update Script" : "Save Script"}
               </Button>
+              <Button variant="outline" size="sm" className="h-9 rounded-xl ml-2" onClick={handleSaveAsDraft} disabled={!result || isSavingScript}>
+                Save as Draft
+              </Button>
+              {savedScriptId ? (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-9 rounded-xl text-muted-foreground hover:text-foreground"
+                  onClick={() => router.push(`/script/${savedScriptId}`)}
+                >
+                  View Draft
+                </Button>
+              ) : null}
             </div>
           </div>
+          {saveError && (
+            <div className="p-3 rounded-xl border border-destructive/40 bg-destructive/10 text-destructive text-sm">
+              {saveError}
+            </div>
+          )}
+
+          {/* Viral Prediction Card */}
+          {result.viralScore !== undefined && (
+            <motion.div 
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="lux-card p-6 rounded-2xl overflow-hidden relative"
+            >
+              <div className="absolute top-0 right-0 p-4 opacity-10">
+                <TrendingUp className="w-24 h-24" />
+              </div>
+              <div className="flex flex-col md:flex-row gap-6 relative z-10">
+                <div className="flex flex-col items-center justify-center p-4 rounded-xl bg-[oklch(0.62_0.24_285_/_8%)] border border-[oklch(0.62_0.24_285_/_15%)] min-w-[120px]">
+                  <div className="text-sm font-bold text-[oklch(0.72_0.20_285)] mb-1">Viral Potential</div>
+                  <div className="text-4xl font-black text-foreground tracking-tighter" style={{ fontFamily: "var(--font-cabinet)" }}>
+                    {result.viralScore}%
+                  </div>
+                  <div className="w-full h-1.5 bg-white/5 rounded-full mt-3 overflow-hidden">
+                    <motion.div 
+                      initial={{ width: 0 }}
+                      animate={{ width: `${result.viralScore}%` }}
+                      transition={{ duration: 1, ease: "easeOut" }}
+                      className="h-full bg-gradient-to-r from-[oklch(0.62_0.24_285)] to-[oklch(0.72_0.20_285)]" 
+                    />
+                  </div>
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-2 text-[oklch(0.72_0.20_285)]">
+                    <Zap className="w-4 h-4" />
+                    <h3 className="text-sm font-bold uppercase tracking-wider">AI Strategy Analysis</h3>
+                  </div>
+                  <p className="text-sm text-foreground/80 leading-relaxed italic">
+                    "{result.viralAnalysis || "Our AI predicts this script has high retention potential due to its punchy hook and clear problem-solution framework."}"
+                  </p>
+                </div>
+              </div>
+            </motion.div>
+          )}
 
           <div className="grid gap-4">
             {sections.slice(0, revealedCount + 1).map((section, i) => (
@@ -763,57 +1069,64 @@ export default function GeneratePage() {
           </div>
 
           <div className="glass-card rounded-2xl p-6 border border-white/8">
-            <h3 className="text-sm font-bold uppercase tracking-[0.12em] text-primary mb-4">AI Thumbnail</h3>
-            <div className="flex flex-col sm:flex-row items-center gap-6">
-              <div className="w-full sm:w-64 h-36 rounded-xl bg-gradient-to-br from-primary/20 to-secondary border border-white/10 flex-shrink-0 relative overflow-hidden">
-                {thumbnailImage ? (
-                  <Image src={thumbnailImage} alt="Generated thumbnail" fill unoptimized className="object-cover" />
-                ) : (
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div
-                      className="absolute inset-0 opacity-5"
-                      style={{ backgroundImage: "linear-gradient(to right, white 1px, transparent 1px)", backgroundSize: "32px 32px" }}
-                    />
-                    <ImageIcon className="w-10 h-10 text-primary/30" />
-                  </div>
-                )}
-              </div>
-              <div className="flex-1 space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="space-y-2">
+                <h3 className="text-sm font-bold uppercase tracking-[0.12em] text-primary">AI Thumbnail</h3>
                 <p className="text-sm text-muted-foreground">
-                  Generate a high-converting thumbnail aligned with this script and platform.
+                  Thumbnail generation now lives in its own tool with default and custom prompt support.
                 </p>
-                <div className="flex flex-wrap items-center gap-3">
-                  <Button
-                    onClick={handleGenerateThumbnail}
-                    disabled={isGeneratingThumbnail}
-                    className="bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 h-10"
-                  >
-                    {isGeneratingThumbnail ? (
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    ) : (
-                      <Sparkles className="w-4 h-4 mr-2" />
-                    )}
-                    {thumbnailImage ? "Regenerate Thumbnail" : "Generate Thumbnail"}
+              </div>
+
+              <div className="flex items-center gap-4">
+                {thumbnailImage ? (
+                  <div className="w-48 h-28 rounded-lg overflow-hidden border border-white/8">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img 
+              src={thumbnailImage} 
+              alt="Generated thumbnail" 
+              className="w-full h-full object-cover" 
+            />
+                  </div>
+                ) : null}
+
+                <div className="flex flex-col gap-2">
+                  <Button onClick={() => router.push("/generate/thumbnail")} className="bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 h-10">
+                    <Sparkles className="w-4 h-4 mr-2" />
+                    Open Thumbnail Generator
                   </Button>
-                  <Button
-                    variant="outline"
-                    onClick={handleDownloadThumbnail}
-                    disabled={!thumbnailImage}
-                    className="border-white/10 bg-white/5 h-10"
-                  >
-                    <Download className="w-4 h-4 mr-2" />
-                    Download PNG
-                  </Button>
+                  <p className="text-xs text-muted-foreground mt-1 max-w-xs">Note: image generation may take up to 2 minutes due to model warm-up. Faster models coming soon.</p>
                 </div>
-                {thumbnailError && (
-                  <p className="text-xs text-destructive flex items-center gap-2">
-                    <AlertCircle className="w-3.5 h-3.5" />
-                    {thumbnailError}
-                  </p>
-                )}
               </div>
             </div>
           </div>
+
+          <Dialog open={exportOpen} onOpenChange={setExportOpen}>
+            <DialogContent className="max-w-md border-white/10 bg-card">
+              <DialogHeader>
+                <DialogTitle>Export script</DialogTitle>
+                <DialogDescription>Choose a format to download your generated script.</DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-3">
+                <Button onClick={handleExportPdf} className="justify-start">
+                  <Download className="w-3.5 h-3.5 mr-2" />
+                  PDF
+                </Button>
+                <Button variant="outline" onClick={handleExportMarkdown} className="justify-start border-white/10">
+                  <Download className="w-3.5 h-3.5 mr-2" />
+                  Markdown
+                </Button>
+                <Button variant="outline" onClick={handleExportDocx} className="justify-start border-white/10">
+                  <Download className="w-3.5 h-3.5 mr-2" />
+                  DOCX
+                </Button>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setExportOpen(false)} className="border-white/10">
+                  Close
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
 
           <Button variant="ghost" onClick={resetAllAndSequence} className="text-muted-foreground hover:text-foreground">
             ← Generate a new script

@@ -1,12 +1,12 @@
 import { createClient } from "@/lib/supabase/server";
-import LuxNavbar from "@/components/landing/LuxNavbar";
-import LuxHero from "@/components/landing/LuxHero";
-import LuxFeatures from "@/components/landing/LuxFeatures";
-import LuxProcess from "@/components/landing/LuxProcess";
-import LuxTestimonials from "@/components/landing/LuxTestimonials";
-import LuxPricing from "@/components/landing/LuxPricing";
-import LuxCta from "@/components/landing/LuxCta";
-import LuxFooter from "@/components/landing/LuxFooter";
+import Navbar from "@/components/layout/Navbar";
+import Hero from "@/components/landing/Hero";
+import Features from "@/components/landing/Features";
+import Process from "@/components/landing/Process";
+import Testimonials from "@/components/landing/Testimonials";
+import Pricing from "@/components/landing/Pricing";
+import Cta from "@/components/landing/Cta";
+import Footer from "@/components/layout/Footer";
 
 export const metadata = {
   title: "Scriptly AI — AI Script & Thumbnail Generator for Creators",
@@ -21,16 +21,16 @@ export default async function HomePage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <LuxNavbar isAuthenticated={isAuthenticated} />
+      <Navbar isAuthenticated={isAuthenticated} />
       <main>
-        <LuxHero isAuthenticated={isAuthenticated} />
-        <LuxFeatures />
-        <LuxProcess />
-        <LuxTestimonials />
-        <LuxPricing />
-        <LuxCta />
+        <Hero isAuthenticated={isAuthenticated} />
+        <Features />
+        <Process />
+        <Testimonials />
+        <Pricing />
+        <Cta />
       </main>
-      <LuxFooter />
+      <Footer />
     </div>
   );
 }

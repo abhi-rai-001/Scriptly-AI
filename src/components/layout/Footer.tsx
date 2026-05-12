@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { ScriptlyLogo } from "./LuxNavbar";
 
 const footerLinks = {
   Product: [
@@ -59,7 +58,7 @@ const socialLinks = [
   },
 ];
 
-export default function LuxFooter() {
+export default function Footer() {
   const year = new Date().getFullYear();
 
   return (
@@ -69,10 +68,9 @@ export default function LuxFooter() {
         <div className="grid grid-cols-2 md:grid-cols-5 gap-8 lg:gap-12">
           {/* Brand column */}
           <div className="col-span-2 md:col-span-1">
-            <Link href="/" className="flex items-center gap-2.5 mb-4 group w-fit">
-              <ScriptlyLogo className="w-8 h-8 transition-transform group-hover:scale-105 duration-300" />
+            <Link href="/" className="flex items-center mb-4 group w-fit">
               <span
-                className="text-base font-bold text-foreground"
+                className="text-lg font-black tracking-[-0.02em] text-foreground"
                 style={{ fontFamily: "var(--font-cabinet)" }}
               >
                 Scriptly<span className="gradient-text-violet">AI</span>

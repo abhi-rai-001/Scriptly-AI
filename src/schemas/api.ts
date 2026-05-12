@@ -11,6 +11,7 @@ export const generateScriptSchema = z.object({
     .string()
     .max(500, "Additional instructions must be 500 characters or less")
     .optional(),
+  language: z.string().default("English"),
 });
 
 export type GenerateScriptInput = z.infer<typeof generateScriptSchema>;
@@ -21,6 +22,8 @@ export const generateThumbnailSchema = z.object({
   hook: z.string().min(1, "Hook is required"),
   niche: z.string().min(1, "Niche is required"),
   platform: z.enum(["instagram", "youtube_shorts", "tiktok"]),
+  customPrompt: z.string().max(10000, "Custom prompt must be 10,000 characters or less").optional(),
+  previousStoragePath: z.string().max(500, "Previous thumbnail path is too long").optional(),
 });
 
 export type GenerateThumbnailInput = z.infer<typeof generateThumbnailSchema>;
@@ -56,6 +59,10 @@ export const saveScriptSchema = z.object({
   cta: z.string().optional(),
   hashtags: z.array(z.string()).optional(),
   thumbnail_base64: z.string().optional(),
+  thumbnail_url: z.string().url().optional(),
+  status: z.enum(["draft","ready","published"]).optional(),
+  viral_score: z.number().min(0).max(100).optional(),
+  viral_analysis: z.string().optional(),
 });
 
-export const updateScriptSchema = saveScriptSchema.partial().omit({ thumbnail_base64: true });
+export const updateScriptSchema = saveScriptSchema.partial();

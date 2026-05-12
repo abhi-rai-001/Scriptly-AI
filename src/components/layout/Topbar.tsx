@@ -1,14 +1,14 @@
 "use client";
 
 import { Search, Plus, Menu, ChevronRight } from "lucide-react";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { SidebarContent } from "./SidebarContent";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { Sidebar } from "./Sidebar";
+import { usePathname, useRouter } from "next/navigation";
+import { useGenerationStore } from "@/store/generationStore";
 
 const breadcrumbLabels: Record<string, string> = {
   "/dashboard": "Dashboard",
@@ -20,6 +20,14 @@ const breadcrumbLabels: Record<string, string> = {
 
 export function Topbar() {
   const pathname = usePathname();
+  const router = useRouter();
+  const resetAll = useGenerationStore((state) => state.resetAll);
+
+  const handleNewScript = (e: React.MouseEvent) => {
+    e.preventDefault();
+    resetAll();
+    router.push("/generate");
+  };
 
   const getPageLabel = () => {
     for (const [prefix, label] of Object.entries(breadcrumbLabels)) {
@@ -44,7 +52,7 @@ export function Topbar() {
               <Menu className="w-5 h-5" />
             </SheetTrigger>
             <SheetContent side="left" className="p-0 w-72 border-r border-white/8 bg-background">
-              <SidebarContent />
+              <Sidebar />
             </SheetContent>
           </Sheet>
         </div>
@@ -77,8 +85,8 @@ export function Topbar() {
         </div>
 
         {/* New Script CTA */}
-        <Link
-          href="/generate"
+        <button
+          onClick={handleNewScript}
           className={cn(
             "btn-amber h-9 px-4 rounded-xl text-sm font-bold inline-flex items-center gap-1.5"
           )}
@@ -86,7 +94,7 @@ export function Topbar() {
           <Plus className="w-4 h-4" />
           <span className="hidden sm:inline">New Script</span>
           <span className="sm:hidden">New</span>
-        </Link>
+        </button>
 
         {/* Avatar */}
         <Avatar className="w-9 h-9 border border-white/10 cursor-pointer hover:ring-2 hover:ring-[oklch(0.62_0.24_285_/_30%)] transition-all duration-200 rounded-xl">

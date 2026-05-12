@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { Sparkles } from "lucide-react";
 
-interface LuxHeroProps {
+interface HeroProps {
   isAuthenticated: boolean;
 }
 
@@ -33,32 +33,47 @@ function useTypewriter(words: string[], speed = 80, pause = 2000) {
   const [displayText, setDisplayText] = useState("");
   const [wordIndex, setWordIndex] = useState(0);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [hasStarted, setHasStarted] = useState(false);
 
   useEffect(() => {
-    const current = words[wordIndex % words.length];
+    const timer = setTimeout(() => setHasStarted(true), 1200);
+    return () => clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    if (!hasStarted) return;
+    const currentWord = words[wordIndex % words.length];
+    
+    if (!isDeleting && displayText === currentWord) {
+      const timeout = setTimeout(() => setIsDeleting(true), pause);
+      return () => clearTimeout(timeout);
+    }
+    
+    if (isDeleting && displayText === "") {
+      const nextTimer = setTimeout(() => {
+        setIsDeleting(false);
+        setWordIndex((prev) => prev + 1);
+      }, 0);
+      return () => clearTimeout(nextTimer);
+    }
+
     const timeout = setTimeout(() => {
-      if (!isDeleting) {
-        setDisplayText(current.slice(0, displayText.length + 1));
-        if (displayText.length === current.length) {
-          setTimeout(() => setIsDeleting(true), pause);
-        }
-      } else {
-        setDisplayText(current.slice(0, displayText.length - 1));
-        if (displayText.length === 0) {
-          setIsDeleting(false);
-          setWordIndex((i) => i + 1);
-        }
-      }
+      setDisplayText(prev => 
+        isDeleting 
+          ? prev.slice(0, -1) 
+          : currentWord.slice(0, prev.length + 1)
+      );
     }, isDeleting ? speed / 2 : speed);
+
     return () => clearTimeout(timeout);
-  }, [displayText, isDeleting, wordIndex, words, speed, pause]);
+  }, [displayText, isDeleting, wordIndex, words, speed, pause, hasStarted]);
 
   return displayText;
 }
 
 const ROTATING_WORDS = ["Reels", "Shorts", "TikToks", "Hooks"];
 
-export default function LuxHero({ isAuthenticated }: LuxHeroProps) {
+export default function Hero({ isAuthenticated }: HeroProps) {
   const primaryHref = isAuthenticated ? "/generate" : "/signup";
   const secondaryHref = isAuthenticated ? "/dashboard" : "/login";
   const word = useTypewriter(ROTATING_WORDS);
@@ -116,9 +131,9 @@ export default function LuxHero({ isAuthenticated }: LuxHeroProps) {
                 style={{ animationDelay: "200ms", animationFillMode: "both" }}
               >
                 viral{" "}
-                <span className="gradient-text inline-block">
+                <span className="gradient-text inline-block min-w-[4ch] text-left">
                   {word}
-                  <span className="animate-pulse text-[oklch(0.80_0.18_85)]">|</span>
+                  <span className="inline-block w-[2px] h-[0.8em] bg-[oklch(0.80_0.18_85)] ml-1 align-middle animate-blink" />
                 </span>
               </span>
               <span

@@ -7,6 +7,7 @@ function buildCreativeBrief(params: GenerateScriptInput): string {
 - Platform: ${params.platform}
 - Style: ${params.style}
 - Duration: ${params.duration}
+- Language: ${params.language || "English"}
 - Additional instructions: ${params.additionalInstructions?.trim() || "None"}`;
 }
 
@@ -22,12 +23,15 @@ Hard constraints:
 - Title: 6-14 words, clear benefit/outcome, curiosity + specificity, no clickbait lies.
 - Hook: one spoken line, high emotional tension or bold claim, instantly understandable.
 - Match the language and pacing of ${params.platform}.
+- ALL generated text (title, hook, script, etc.) MUST be in ${params.language || "English"}.
 - Respect the style and additional instructions exactly.
 
 Return ONLY valid JSON with this exact schema:
 {
   "title": "...",
-  "hook": "..."
+  "hook": "...",
+  "viral_score": 85,
+  "viral_analysis": "Explain why this hook and title combo works for the current platform algorithm"
 }
 
 Rules:
@@ -57,6 +61,7 @@ Quality rules:
 - Include at least one pattern interrupt.
 - Avoid repetitive phrases and generic AI tone.
 - Keep claims realistic; do not fabricate statistics.
+- ALL generated text MUST be in ${params.language || "English"}.
 - Respect additional instructions if provided.
 
 Return ONLY valid JSON with this exact schema:
@@ -111,7 +116,9 @@ Rules:
 Return ONLY a JSON array of strings: ["#Tag1", "#Tag2"]`;
 }
 
-export function buildThumbnailPrompt(params: GenerateThumbnailInput): string {
+export function buildThumbnailPrompt(
+  params: Pick<GenerateThumbnailInput, "title" | "hook" | "niche" | "platform">
+): string {
   return `Create a premium, high-converting ${params.platform === 'youtube_shorts' ? 'YouTube Shorts' : params.platform === 'instagram' ? 'Instagram Reel' : 'TikTok'} thumbnail.
 
 Video title: ${params.title}

@@ -102,7 +102,7 @@ function FeatureCard({ feature, index }: { feature: typeof features[0]; index: n
   );
 }
 
-export default function LuxFeatures() {
+export default function Features() {
   return (
     <section id="features" className="py-28 relative">
       {/* Section fade from hero */}
