@@ -52,11 +52,12 @@ export default function NotFound() {
           </div>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Button asChild className="h-12 px-8 btn-amber border-0 rounded-xl font-bold text-base min-w-[200px]">
-              <Link href="/dashboard">
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Back to Dashboard
-              </Link>
+            <Button 
+              render={<Link href="/dashboard" />}
+              className="h-12 px-8 btn-amber border-0 rounded-xl font-bold text-base min-w-[200px]"
+            >
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back to Dashboard
             </Button>
             <Button variant="ghost" className="h-12 px-8 text-muted-foreground hover:text-foreground rounded-xl">
               <Mail className="w-4 h-4 mr-2" />
