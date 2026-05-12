@@ -584,6 +584,17 @@ export default function GeneratePage() {
       if (!savedScriptId && data?.id) {
         setSavedScriptId(data.id);
       }
+
+      // Success feedback and return to form
+      import("sonner").then(({ toast }) => {
+        toast.success(savedScriptId ? "Script updated!" : "Script saved!");
+      });
+      
+      setStep(0);
+      setResult(null);
+      setThumbnailImage(null);
+      setThumbnailUrl(null);
+      setSaveError(null);
     } catch (saveScriptError: unknown) {
       setSaveError(saveScriptError instanceof Error ? saveScriptError.message : "Failed to save script");
     } finally {
@@ -600,7 +611,7 @@ export default function GeneratePage() {
     setIsGenerating(true);
     setError(null);
     setResult(null);
-    setSavedScriptId(null);
+    // setSavedScriptId(null); // Removed to allow updating same script across generations
     setSaveError(null);
     setRevealedCount(0);
 
@@ -761,6 +772,17 @@ export default function GeneratePage() {
       if (!savedScriptId && data?.id) {
         setSavedScriptId(data.id);
       }
+
+      // Success feedback and return to form
+      import("sonner").then(({ toast }) => {
+        toast.success(savedScriptId ? "Script updated!" : "Script saved!");
+      });
+      
+      setStep(0);
+      setResult(null);
+      setThumbnailImage(null);
+      setThumbnailUrl(null);
+      setSaveError(null);
     } catch (saveScriptError: unknown) {
       setSaveError(saveScriptError instanceof Error ? saveScriptError.message : "Failed to save script");
     } finally {
