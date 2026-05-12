@@ -80,7 +80,7 @@ function StepCard({ step, index }: { step: typeof steps[0]; index: number }) {
   );
 }
 
-export default function Process.tsx() {
+export default function Process() {
   return (
     <section id="process" className="py-28 relative" style={{ background: "oklch(0.14 0.007 285)" }}>
       {/* Fade borders */}
