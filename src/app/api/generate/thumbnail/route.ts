@@ -33,32 +33,58 @@ export async function POST(req: NextRequest) {
     const prompt = customPrompt?.trim() || buildThumbnailPrompt(thumbnailParams);
 
     const hfKey = process.env.HUGGINGFACE_API_KEY;
-    if (!hfKey) {
-      return NextResponse.json(
-        { error: "Hugging Face API key is missing from environment variables." },
-        { status: 500 }
-      );
+    const hf = hfKey ? new HfInference(hfKey) : null;
+
+    let blob: Blob | null = null;
+    let usedFallback = false;
+
+    // 1. Try Hugging Face
+    if (hf) {
+      try {
+        const imageResult = await hf.textToImage({
+          model: HF_MODEL_ID,
+          inputs: prompt,
+        }, {
+          wait_for_model: true,
+        }) as Blob;
+
+        if (typeof imageResult === "string") {
+          const response = await fetch(imageResult);
+          if (response.ok) {
+            blob = await response.blob();
+          }
+        } else {
+          blob = imageResult;
+        }
+      } catch (err) {
+        console.error("Hugging Face primary model failed, trying fallback...", err);
+      }
     }
 
-    const hf = new HfInference(hfKey);
-
-    // Call Hugging Face via official SDK
-    const imageResult = await hf.textToImage({
-      model: HF_MODEL_ID,
-      inputs: prompt,
-    }, {
-      wait_for_model: true,
-    }) as Blob;
-
-    let blob: Blob;
-    if (typeof imageResult === "string") {
-      const response = await fetch(imageResult);
-      if (!response.ok) {
-        return NextResponse.json({ error: "Thumbnail generation failed" }, { status: 502 });
+    // 2. Fallback to Pollinations AI (Unlimited, Free, and very reliable)
+    if (!blob) {
+      try {
+        usedFallback = true;
+        const seed = Math.floor(Math.random() * 1000000);
+        const encodedPrompt = encodeURIComponent(prompt);
+        // Use Flux model on Pollinations for high quality
+        const pollUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=1280&height=720&seed=${seed}&model=flux&nologo=true`;
+        
+        const response = await fetch(pollUrl);
+        if (!response.ok) {
+          throw new Error(`Pollinations AI failed with status ${response.status}`);
+        }
+        blob = await response.blob();
+      } catch (err) {
+        console.error("Pollinations AI fallback failed:", err);
       }
-      blob = await response.blob();
-    } else {
-      blob = imageResult;
+    }
+
+    if (!blob) {
+      return NextResponse.json(
+        { error: "Thumbnail generation failed. All providers are currently unavailable." },
+        { status: 503 }
+      );
     }
 
     const arrayBuffer = await blob.arrayBuffer();
@@ -88,6 +114,7 @@ export async function POST(req: NextRequest) {
         imageBase64: `data:${mimeType};base64,${base64Data}`,
         imageUrl: null,
         storagePath: null,
+        info: usedFallback ? "Generated via fallback provider (Storage error)" : undefined
       });
     }
 
@@ -112,18 +139,11 @@ export async function POST(req: NextRequest) {
       imageBase64: `data:${mimeType};base64,${base64Data}`,
       imageUrl: publicUrl,
       storagePath: fileName,
+      info: usedFallback ? "Generated via fallback provider" : undefined
     });
   } catch (error: unknown) {
     const message = getErrorMessage(error);
-    console.error("Thumbnail Generation Error Details:", error);
-
-    // Handle model loading error gracefully (503 Service Unavailable)
-    if (message.includes("currently loading")) {
-       return NextResponse.json(
-         { error: "Image model is cold-starting. Please try again in about 30 seconds." },
-         { status: 503 }
-       );
-    }
+    console.error("Thumbnail Generation Route Error:", error);
 
     return NextResponse.json(
       {
