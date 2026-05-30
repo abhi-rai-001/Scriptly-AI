@@ -4,7 +4,7 @@ import Hero from "@/components/landing/Hero";
 import Features from "@/components/landing/Features";
 import Process from "@/components/landing/Process";
 import Testimonials from "@/components/landing/Testimonials";
-import Pricing from "@/components/landing/Pricing";
+// import Pricing from "@/components/landing/Pricing";
 import Cta from "@/components/landing/Cta";
 import Footer from "@/components/layout/Footer";
 
@@ -27,7 +27,7 @@ export default async function HomePage() {
         <Features />
         <Process />
         <Testimonials />
-        <Pricing />
+        {/* <Pricing /> */}
         <Cta />
       </main>
       <Footer />

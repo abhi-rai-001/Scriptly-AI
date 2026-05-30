@@ -5,7 +5,6 @@ import Link from "next/link";
 const footerLinks = {
   Product: [
     { label: "Features", href: "#features" },
-    { label: "Pricing", href: "#pricing" },
     { label: "Changelog", href: "/changelog" },
     { label: "API Docs", href: "/docs" },
   ],

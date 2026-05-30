@@ -51,7 +51,6 @@ export function ScriptlyLogo({ className }: { className?: string }) {
 const navLinks = [
   { label: "Features", href: "#features" },
   { label: "How It Works", href: "#process" },
-  { label: "Pricing", href: "#pricing" },
   { label: "Testimonials", href: "#testimonials" },
 ];
 

@@ -189,15 +189,15 @@ function StatCard({ label, value, icon: Icon, delta, accent, onClick, active }: 
 }
 
 // ─── Script Card ─────────────────────────────────────────
-function ScriptCardComponent({ 
-  script, 
+function ScriptCardComponent({
+  script,
   handleDuplicate,
   handleDelete,
   handleMoveToProject,
   isActionLoading,
   projects,
-}: { 
-  script: ScriptCard; 
+}: {
+  script: ScriptCard;
   handleDuplicate: (id: string) => void;
   handleDelete: (id: string) => void;
   handleMoveToProject: (scriptId: string, projectId: string | null) => void;
@@ -210,7 +210,7 @@ function ScriptCardComponent({
   const PlatformIcon = platform.icon;
 
   return (
-    <div 
+    <div
       onClick={() => router.push(`/script/${script.id}`)}
       className="lux-card rounded-2xl overflow-hidden group border border-white/5 hover:border-[oklch(0.62_0.24_285_/_30%)] transition-all duration-300 cursor-pointer active:scale-[0.98]"
     >
@@ -218,9 +218,9 @@ function ScriptCardComponent({
       <div className="relative h-40 flex items-center justify-center overflow-hidden bg-secondary/30">
         {script.thumbnailUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img 
-            src={script.thumbnailUrl} 
-            alt={script.title} 
+          <img
+            src={script.thumbnailUrl}
+            alt={script.title}
             className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
           />
         ) : (
@@ -269,11 +269,11 @@ function ScriptCardComponent({
               </div>
             )}
           </div>
-           <DropdownMenu>
+          <DropdownMenu>
             <DropdownMenuTrigger render={
-              <Button 
-                variant="ghost" 
-                size="icon" 
+              <Button
+                variant="ghost"
+                size="icon"
                 onClick={(e) => e.stopPropagation()}
                 className="w-7 h-7 flex-shrink-0 text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity rounded-lg"
               >
@@ -290,8 +290,8 @@ function ScriptCardComponent({
                   <FolderOpen className="w-3.5 h-3.5 mr-2" /> Move to Project
                 </DropdownMenuSubTrigger>
                 <DropdownMenuSubContent className="bg-card border-white/10 w-48">
-                  <DropdownMenuItem 
-                    className="text-sm cursor-pointer" 
+                  <DropdownMenuItem
+                    className="text-sm cursor-pointer"
                     onClick={(e) => { e.stopPropagation(); handleMoveToProject(script.id, null); }}
                     disabled={!script.projectId}
                   >
@@ -299,7 +299,7 @@ function ScriptCardComponent({
                   </DropdownMenuItem>
                   {projects.length > 0 && <DropdownMenuSeparator className="bg-white/8" />}
                   {projects.map((p) => (
-                    <DropdownMenuItem 
+                    <DropdownMenuItem
                       key={p.id}
                       className="text-sm cursor-pointer"
                       onClick={(e) => { e.stopPropagation(); handleMoveToProject(script.id, p.id); }}
@@ -312,9 +312,9 @@ function ScriptCardComponent({
               </DropdownMenuSub>
 
               <DropdownMenuSeparator className="bg-white/8" />
-              
-              <DropdownMenuItem 
-                className="text-sm cursor-pointer" 
+
+              <DropdownMenuItem
+                className="text-sm cursor-pointer"
                 onClick={(e) => { e.stopPropagation(); handleDuplicate(script.id); }}
                 disabled={isActionLoading === script.id}
               >
@@ -322,8 +322,8 @@ function ScriptCardComponent({
                 Duplicate
               </DropdownMenuItem>
 
-              <DropdownMenuItem 
-                className="text-sm text-destructive cursor-pointer focus:text-destructive" 
+              <DropdownMenuItem
+                className="text-sm text-destructive cursor-pointer focus:text-destructive"
                 onClick={(e) => { e.stopPropagation(); handleDelete(script.id); }}
                 disabled={isActionLoading === script.id}
               >
@@ -419,7 +419,7 @@ function DashboardContent() {
     try {
       setLoading(true);
       const supabase = createClient();
-      
+
       const [scriptsResponse, projectsResponse, { data: { user: supabaseUser } }] = await Promise.all([
         fetch("/api/scripts"),
         fetch("/api/projects"),
@@ -427,11 +427,11 @@ function DashboardContent() {
       ]);
 
       if (supabaseUser) {
-        setUser({ 
-          name: supabaseUser.user_metadata?.full_name || 
-                supabaseUser.user_metadata?.name || 
-                supabaseUser.email?.split("@")[0] || 
-                null 
+        setUser({
+          name: supabaseUser.user_metadata?.full_name ||
+            supabaseUser.user_metadata?.name ||
+            supabaseUser.email?.split("@")[0] ||
+            null
         });
       }
 
@@ -533,38 +533,38 @@ function DashboardContent() {
     const ready = scripts.filter((s) => s.status === "ready").length;
 
     return [
-      { 
-        label: "Total Scripts", 
-        value: String(totalScripts), 
-        icon: FileVideo, 
-        delta: "Saved in DB", 
+      {
+        label: "Total Scripts",
+        value: String(totalScripts),
+        icon: FileVideo,
+        delta: "Saved in DB",
         accent: "oklch(0.62 0.24 285)",
         onClick: () => { setStatusFilter("all"); setPlatform("all"); },
         active: statusFilter === "all" && platform === "all"
       },
-      { 
-        label: "Published", 
-        value: String(published), 
-        icon: TrendingUp, 
-        delta: "Live in library", 
+      {
+        label: "Published",
+        value: String(published),
+        icon: TrendingUp,
+        delta: "Live in library",
         accent: "oklch(0.72 0.16 160)",
         onClick: () => setStatusFilter("published"),
         active: statusFilter === "published"
       },
-      { 
-        label: "Drafts", 
-        value: String(drafts), 
-        icon: Sparkles, 
-        delta: "Awaiting save", 
+      {
+        label: "Drafts",
+        value: String(drafts),
+        icon: Sparkles,
+        delta: "Awaiting save",
         accent: "oklch(0.80 0.18 85)",
         onClick: () => setStatusFilter("draft"),
         active: statusFilter === "draft"
       },
-      { 
-        label: "Ready", 
-        value: String(ready), 
-        icon: FolderOpen, 
-        delta: "Ready to post", 
+      {
+        label: "Ready",
+        value: String(ready),
+        icon: FolderOpen,
+        delta: "Ready to post",
         accent: "oklch(0.68 0.20 220)",
         onClick: () => setStatusFilter("ready"),
         active: statusFilter === "ready"
@@ -684,9 +684,9 @@ function DashboardContent() {
             <EmptyState />
           ) : (
             filtered.map((script) => (
-              <ScriptCardComponent 
-                key={script.id} 
-                script={script} 
+              <ScriptCardComponent
+                key={script.id}
+                script={script}
                 projects={projects}
                 handleDuplicate={handleDuplicate}
                 handleDelete={handleDelete}
